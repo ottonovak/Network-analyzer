@@ -1,8 +1,10 @@
+from scapy.compat import bytes_hex
+from scapy.utils import rdpcap
+
+Packets = rdpcap("vzorky_pcap_na_analyzu\\\\eth-1.pcap")
 
 
-def print_hi(name):
-
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
-
-if __name__ == '__main__':
-    print_hi('Idze Github?')
+mini = bytes_hex(Packets[0])
+for x in Packets[0]:
+    print(bytes_hex(x))
+print(mini)
