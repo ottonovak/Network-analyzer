@@ -1,9 +1,9 @@
-#Ethertypes
+#ETHER_types
 0x0800 2048 IPv4
 0x0806 2054 ARP
 0x86dd 34525 IPv6
 
-#LSAPs
+#LSAP_types
 0x42 66 STP
 0xaa 170 SNAP
 0xe0 224 IPX

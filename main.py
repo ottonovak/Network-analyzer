@@ -5,20 +5,19 @@ from scapy.compat import bytes_hex
 from scapy.utils import rdpcap
 import hashlib
 
-
-
-ethertypes = {}
-LSAPs = {}
+files = []
+ETHER_types = {}
+LSAP_types = {}
 IPprotocolNumbers = {}
 TCPports = {}
 UDPports = {}
 
-def inicializacia_premennych():
-    global ethertypes, LSAPs, IPprotocolNumbers, TCPports, UDPports
-    PROTOKOLY = open('protokoly.txt', 'r')
+def inicializacia_protokolov():
+    global ETHER_types, LSAP_types, IPprotocolNumbers, TCPports, UDPports # Prikaz "global" aby zapisoval do glabalnych premennich
+    FILE_PROTOKOLY = open('protokoly.txt', 'r')
 
     i = 0
-    for line in PROTOKOLY:
+    for line in FILE_PROTOKOLY:
         if line[0] == '#':
             i += 1
             continue
@@ -28,7 +27,7 @@ def inicializacia_premennych():
         if line[len(line)-1] == '\n':
             line = line[:len(line) - 1].split(" ")
         else:
-            line = line.split(" ")  #POSLEDNY PROTOK
+            line = line.split(" ")  #POSLEDNY PROTOL
 
         num = int(line[1])
         stringos = line[2]
@@ -36,9 +35,9 @@ def inicializacia_premennych():
             for word in line[3:]:
                 stringos += " " + word
         if i == 1:
-            ethertypes[num] = stringos
+            ETHER_types[num] = stringos
         elif i == 2:
-            LSAPs[num] = stringos
+            LSAP_types[num] = stringos
         elif i == 3:
             IPprotocolNumbers[num] = stringos
         elif i == 4:
@@ -46,44 +45,51 @@ def inicializacia_premennych():
         elif i == 5:
             UDPports[num] = stringos
 
-    PROTOKOLY.close()
+    FILE_PROTOKOLY.close()
 
 def find_ether_type(hex_packet):
+    # Hlada v slovniku nazov protokolu (ktore cerpal z databaze/textaku "protokoly.txt")
     str1 = hex_packet[24:28]
+    index_dictionary = int(str1.decode(), 16)
 
-    if ethertypes.__contains__(int(str1.decode(), 16)):
-        print(ethertypes[int(str1.decode(), 16)])
+    if ETHER_types.__contains__(index_dictionary):  # Preverii ak taky protokol bol vobec uvedeni databaze
+        return ETHER_types[index_dictionary]
     else:
-        print("Tento Ethertype nie je uvedeny v databaze")
+        return "Tento Ethertype nie je uvedeny v databaze"
 
+def find_lsap_type(hex_packet):
+    # Hlada v slovniku nazov protokolu (ktore cerpal z databaze/textaku "protokoly.txt")
+    str2 = hex_packet[28:30]
+    index_dictionary = int(str2.decode(), 16)
 
-inicializacia_premennych()
+    if LSAP_types.__contains__(index_dictionary):  # Preverii ak taky protokol bol vobec uvedeni databaze
+        return LSAP_types[index_dictionary]
+    else:
+        return "Tento LSAP nie je uvedeny v databaze"
 
-
-FILE = open(r"vypis.txt", "w")
-
-                # 1. Bod Zadania
-files = []      # Program cita vsetky subory z priecinku "subory_na_analyzu"
+inicializacia_protokolov()
 
 for (dirpath, dirnames, filenames) in walk("./subory_na_analyzu"):
+    # Program cita vsetky subory z priecinku "subory_na_analyzu"
     files.extend(filenames)
 
 for filename in files:
-
-    FILE.write("\n<<<<<<<< Analyzujes subor " + filename + " >>>>>>>>\n")
+    FILE_VYPIS = open(r"vypis.txt", "w")
+    FILE_VYPIS.write("\n<<<<<<<< Analyzujes subor " + filename + " >>>>>>>>\n")
     packets = rdpcap(f"./subory_na_analyzu/{filename}")
 
     index_frame = 1
 
     for packet in packets:
         # Vypis ramca (Poradové číslo rámca v analyzovanom súbore)
-        FILE.write("rámec " + str(index_frame) + "\n")
+        FILE_VYPIS.write("rámec " + str(index_frame) + "\n")
         index_frame += 1
+        vnoreny_protokol = ""
 
         # Vypis dlzonk (Dĺžku rámca v bajtoch poskytnutú pcap API a dĺžku tohto rámca prenášaného po médiu)
         dlzka_ramca = len(packet)
-        FILE.write("dlzka ramca poskytnuta pcap API - " + str(dlzka_ramca) + "B\n")
-        FILE.write("dlzka ramca prenasaneho po mediu – " + str(max(64, dlzka_ramca + 4)) + "B\n")
+        FILE_VYPIS.write("dlzka ramca poskytnuta pcap API - " + str(dlzka_ramca) + "B\n")
+        FILE_VYPIS.write("dlzka ramca prenasaneho po mediu – " + str(max(64, dlzka_ramca + 4)) + "B\n")
 
         # Vypis typu ramca (– Ethernet II, IEEE 802.3 (IEEE 802.3 s LLC, IEEE 802.3 s LLC a SNAP, IEEE 802.3 - Raw)
         hex_packet = bytes_hex(packet)
@@ -91,36 +97,40 @@ for filename in files:
         str2 = hex_packet[28:30]
 
         if int(str1, 16) > 1500:
-            FILE.write("Ethernet II\n")
-            find_ether_type(hex_packet)
+            FILE_VYPIS.write("Ethernet II\n")
+            vnoreny_protokol = find_ether_type(hex_packet)
 
         elif str2.decode() == "ff" or str2.decode() == "FF":
-            FILE.write("IEEE 802.3 - Raw\n")
-            # TODO vypis je ze IPX
+            FILE_VYPIS.write("IEEE 802.3 - Raw\n")
+            vnoreny_protokol = "IPX"
 
         elif str2.decode() == "aa" or str2.decode() == "AA":
-            FILE.write("IEEE 802.3 s LLC a SNAP\n")
+            FILE_VYPIS.write("IEEE 802.3 s LLC a SNAP\n")
+            vnoreny_protokol = find_lsap_type(hex_packet)
 
         else:
-            FILE.write("IEEE 802.3 LLC\n")
+            FILE_VYPIS.write("IEEE 802.3 LLC\n")
+            vnoreny_protokol = find_lsap_type(hex_packet)
 
         # Vypis adres (Zdrojovú a cieľovú fyzickú (MAC) adresu uzlov, medzi ktorými je rámec prenášaný)
         # Vypis zdrojovej MAC adresy
-        FILE.write("Zdrojova MAC adresa: ")
+        FILE_VYPIS.write("Zdrojova MAC adresa: ")
         for i in range(6):
             if i != 5:
-                FILE.write(chr(hex_packet[i * 2 + 12]) + chr(hex_packet[i * 2 + 13]) + " ")
+                FILE_VYPIS.write(chr(hex_packet[i * 2 + 12]) + chr(hex_packet[i * 2 + 13]) + " ")
             else:
-                FILE.write(chr(hex_packet[i * 2 + 12]) + chr(hex_packet[i * 2 + 13]) + "\n")
+                FILE_VYPIS.write(chr(hex_packet[i * 2 + 12]) + chr(hex_packet[i * 2 + 13]) + "\n")
 
         # Vypis cielovej MAC adresy
-        FILE.write("Cielova MAC adresa: ")
+        FILE_VYPIS.write("Cielova MAC adresa: ")
         for i in range(6):
             if i != 5:
-                FILE.write(chr(hex_packet[i * 2]) + chr(hex_packet[i * 2 + 1]) + " ")
+                FILE_VYPIS.write(chr(hex_packet[i * 2]) + chr(hex_packet[i * 2 + 1]) + " ")
             else:
-                FILE.write(chr(hex_packet[i * 2]) + chr(hex_packet[i * 2 + 1]) + "\n")
+                FILE_VYPIS.write(chr(hex_packet[i * 2]) + chr(hex_packet[i * 2 + 1]) + "\n")
 
+        # Vypis vnoreneho protokola
+        FILE_VYPIS.write(vnoreny_protokol + "\n")
 
         # Vypis celeho ramca
         for i in range(dlzka_ramca):    # Iterujem cez kazdy dajt
@@ -128,14 +138,12 @@ for filename in files:
             str2 = hex_packet[i * 2 + 1]
 
             if i % 16 == 15:                                # Pre posledny riadok
-                FILE.write(chr(str1) + chr(str2) + "\n")
+                FILE_VYPIS.write(chr(str1) + chr(str2) + "\n")
             elif i % 8 == 0 and i != 0 and i % 16 != 0:     # Pre oddelenie v prostriedku riadku
-                FILE.write(" " + chr(str1) + chr(str2) + " ")
+                FILE_VYPIS.write(" " + chr(str1) + chr(str2) + " ")
             elif i == dlzka_ramca - 1:                      # Pre osetrenie medzery za poslednym bajtom
-                FILE.write(chr(str1) + chr(str2) + "\n\n")
+                FILE_VYPIS.write(chr(str1) + chr(str2) + "\n\n")
             else:                                           # Pre vsetky ine
-                FILE.write(chr(str1) + chr(str2) + " ")
+                FILE_VYPIS.write(chr(str1) + chr(str2) + " ")
 
-# 2. Bod Zadania
-
-FILE.close()
+    FILE_VYPIS.close()
