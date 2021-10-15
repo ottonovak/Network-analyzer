@@ -16,34 +16,38 @@ def inicializacia_protokolov():
     global ETHER_types, LSAP_types, IPprotocolNumbers, TCPports, UDPports # Prikaz "global" aby zapisoval do glabalnych premennich
     FILE_PROTOKOLY = open('protokoly.txt', 'r')
 
-    i = 0
+    type_of_protocol = ""
     for line in FILE_PROTOKOLY:
-        if line[0] == '#':
-            i += 1
-            continue
-        elif line[0] == '\n':
+        if line[0] == "#":
+            type_of_protocol = line[1:len(line) - 1]
             continue
 
-        if line[len(line)-1] == '\n':
-            line = line[:len(line) - 1].split(" ")
-        else:
-            line = line.split(" ")  #POSLEDNY PROTOL
+        if line[0] != "0":  # Vynimka, kazdy protokol zacina z hex cislo "0x-----"
+            continue
 
-        num = int(line[1])
-        stringos = line[2]
-        if len(line) > 3:
-            for word in line[3:]:
-                stringos += " " + word
-        if i == 1:
-            ETHER_types[num] = stringos
-        elif i == 2:
-            LSAP_types[num] = stringos
-        elif i == 3:
-            IPprotocolNumbers[num] = stringos
-        elif i == 4:
-            TCPports[num] = stringos
-        elif i == 5:
-            UDPports[num] = stringos
+        line = line.strip()         # "strip" vymaze nove riadky so stringu
+        words = line.split(" ")     # Vytvori pole slov
+        str1_int = int(words[1])
+        nested_protocol = words[2]
+
+        if len(words) >= 4:     # Vynimka pre nazvy vnorenych protokolova z viac slov
+            for word in words[3:]:
+                nested_protocol += " " + word
+
+        if type_of_protocol == "ETHER":
+            ETHER_types[str1_int] = nested_protocol
+
+        elif type_of_protocol == "LSAP":
+            LSAP_types[str1_int] = nested_protocol
+
+        elif type_of_protocol == "IP":
+            IPprotocolNumbers[str1_int] = nested_protocol
+
+        elif type_of_protocol == "TCP":
+            TCPports[str1_int] = nested_protocol
+
+        elif type_of_protocol == "UDP":
+            UDPports[str1_int] = nested_protocol
 
     FILE_PROTOKOLY.close()
 
