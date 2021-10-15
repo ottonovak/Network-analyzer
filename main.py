@@ -5,7 +5,62 @@ from scapy.compat import bytes_hex
 from scapy.utils import rdpcap
 import hashlib
 
-FILE = open(r"vypis.txt","w")
+
+
+ethertypes = {}
+LSAPs = {}
+IPprotocolNumbers = {}
+TCPports = {}
+UDPports = {}
+
+def inicializacia_premennych():
+    global ethertypes, LSAPs, IPprotocolNumbers, TCPports, UDPports
+    PROTOKOLY = open('protokoly.txt', 'r')
+
+    i = 0
+    for line in PROTOKOLY:
+        if line[0] == '#':
+            i += 1
+            continue
+        elif line[0] == '\n':
+            continue
+
+        if line[len(line)-1] == '\n':
+            line = line[:len(line) - 1].split(" ")
+        else:
+            line = line.split(" ")  #POSLEDNY PROTOK
+
+        num = int(line[1])
+        stringos = line[2]
+        if len(line) > 3:
+            for word in line[3:]:
+                stringos += " " + word
+        if i == 1:
+            ethertypes[num] = stringos
+        elif i == 2:
+            LSAPs[num] = stringos
+        elif i == 3:
+            IPprotocolNumbers[num] = stringos
+        elif i == 4:
+            TCPports[num] = stringos
+        elif i == 5:
+            UDPports[num] = stringos
+
+    PROTOKOLY.close()
+
+def find_ether_type(hex_packet):
+    str1 = hex_packet[24:28]
+
+    if ethertypes.__contains__(int(str1.decode(), 16)):
+        print(ethertypes[int(str1.decode(), 16)])
+    else:
+        print("Tento Ethertype nie je uvedeny v databaze")
+
+
+inicializacia_premennych()
+
+
+FILE = open(r"vypis.txt", "w")
 
                 # 1. Bod Zadania
 files = []      # Program cita vsetky subory z priecinku "subory_na_analyzu"
@@ -37,11 +92,11 @@ for filename in files:
 
         if int(str1, 16) > 1500:
             FILE.write("Ethernet II\n")
-            vnoreny_protokol = "Ethertype " + str(str1.decode())
+            find_ether_type(hex_packet)
 
         elif str2.decode() == "ff" or str2.decode() == "FF":
             FILE.write("IEEE 802.3 - Raw\n")
-            vnoreny_protokol = "IPX"
+            # TODO vypis je ze IPX
 
         elif str2.decode() == "aa" or str2.decode() == "AA":
             FILE.write("IEEE 802.3 s LLC a SNAP\n")
@@ -66,8 +121,6 @@ for filename in files:
             else:
                 FILE.write(chr(hex_packet[i * 2]) + chr(hex_packet[i * 2 + 1]) + "\n")
 
-        # Vypis vnoreneho protokola
-        FILE.write(vnoreny_protokol + "\n")
 
         # Vypis celeho ramca
         for i in range(dlzka_ramca):    # Iterujem cez kazdy dajt

@@ -1,0 +1,29 @@
+#Ethertypes
+0x0800 2048 IPv4
+0x0806 2054 ARP
+0x86dd 34525 IPv6
+
+#LSAPs
+0x42 66 STP
+0xaa 170 SNAP
+0xe0 224 IPX
+
+#IP Protocol numbers
+0x01 1 ICMP
+0x06 6 TCP
+0x11 17 UDP
+
+#TCP ports
+0x0014 20 FTP datove
+0x0015 21 FTP riadiace
+0x0016 22 SSH
+0x0017 23 TELNET
+0x0035 53 DNS
+0x0050 80 HTTP
+0x01bb 443 HTTPS
+
+#UDP ports
+0x0035 53 DNS
+0x0045 69 TFTP
+0x0202 514 syslog
+0x829a 33434 traceroute
