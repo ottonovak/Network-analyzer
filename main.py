@@ -11,7 +11,8 @@ LSAP_types = {}
 IPprotocols = {}
 TCPports = {}
 UDPports = {}
-sourceIPadresses = {}
+source_IP_adresses = {}
+source_IPv4_adresses = {}
 FILE_VYPIS = open(r"vypis.txt", "w")
 
 def protocol_initialization():
@@ -53,17 +54,24 @@ def protocol_initialization():
 
     FILE_PROTOKOLY.close()
 
-def add_ip_to_list(hex_packet):
-    adr1 = int(hex_packet[56:58], 16)
-    adr2 = int(hex_packet[58:60], 16)
-    adr3 = int(hex_packet[60:62], 16)
-    adr4 = int(hex_packet[62:64], 16)
+def add_ip_to_list(hex_packet ,type):
+    global source_IPv4_adresses,source_IPv4_adresses
+    adr1 = int(hex_packet[52:54], 16)
+    adr2 = int(hex_packet[54:56], 16)
+    adr3 = int(hex_packet[56:58], 16)
+    adr4 = int(hex_packet[58:60], 16)
+    adress_str = str(adr1) + "." + str(adr2) + "." + str(adr3) + "." + str(adr4)  # Vytori string adrese
 
-    adress_str = str(adr1) + "." + str(adr2) + "." + str(adr3) + "." + str(adr4) # Vytori string adrese
-    if sourceIPadresses.__contains__(adress_str):   # Ak adresa sa nachadza v slovniku, pripocita pocet vyskitnutii
-        sourceIPadresses[adress_str] += 1
-    else:
-        sourceIPadresses[adress_str] = 1            # Ked adresa sa 1x vyskitla
+    if type == "IP":
+        if source_IP_adresses.__contains__(adress_str):   # Ak adresa sa nachadza v slovniku, pripocita pocet vyskitnutii
+            source_IP_adresses[adress_str] += 1
+        else:
+            source_IP_adresses[adress_str] = 1            # Ked adresa sa 1x vyskitla
+    elif type == "IPv4":
+        if source_IPv4_adresses.__contains__(adress_str):
+            source_IPv4_adresses[adress_str] += 1
+        else:
+            source_IPv4_adresses[adress_str] = 1
 
 def find_ether_type(hex_packet):
     # Hlada v slovniku nazov protokolu (ktore cerpal z databaze/textaku "protokoly.txt")
@@ -71,7 +79,9 @@ def find_ether_type(hex_packet):
     index_dictionary = int(str1.decode(), 16)
 
     if ETHER_types.__contains__(index_dictionary):  # Preverii ak taky protokol bol vobec uvedeni databaze
-        add_ip_to_list(hex_packet)
+        add_ip_to_list(hex_packet, "IP")
+        if ETHER_types[index_dictionary] == "IPv4":
+            add_ip_to_list(hex_packet, "IPv4")
         return ETHER_types[index_dictionary]
     else:
         return "Tento Ethertype nie je uvedeny v databaze"
@@ -169,10 +179,10 @@ for filename in files:
 
 
 FILE_VYPIS.write("Zoznam IP adries vsetkych odosielajucich uzlov: \n")
-for adress in sourceIPadresses:
-    FILE_VYPIS.write(adress + "\n")
+for adress in source_IPv4_adresses:
+    FILE_VYPIS.write(adress + " " + str(source_IPv4_adresses[adress])+"\n")
 
-most_often_IPadress = max(sourceIPadresses, key=sourceIPadresses.get)
-FILE_VYPIS.write("\nIP adresa uzla, ktora odoslala najvacsi pocet paketov: "+ str(most_often_IPadress) + " - " + str(sourceIPadresses[most_often_IPadress]) + " uzlov")
+most_often_IPv4adress = max(source_IPv4_adresses, key=source_IPv4_adresses.get)
+FILE_VYPIS.write("\nIPv4 adresa uzla, ktora odoslala najvacsi pocet paketov: "+ str(most_often_IPv4adress) + " - " + str(source_IPv4_adresses[most_often_IPv4adress]) + " uzlov")
 
 FILE_VYPIS.close()
