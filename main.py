@@ -3,7 +3,7 @@ import operator
 from os import walk
 from scapy.compat import bytes_hex
 from scapy.utils import rdpcap
-import hashlib
+
 
 files = []
 ETHER_types = {}
@@ -14,9 +14,10 @@ UDPports = {}
 source_IPv4_adresses = {}
 FILE_VYPIS = open(r"vypis.txt", "w")
 
+
 def protocol_initialization():
-    global ETHER_types, LSAP_types, IPprotocols, TCPports, UDPports # Prikaz "global" aby zapisoval do glabalnych premennich
-    FILE_PROTOKOLY = open('protokoly.txt', 'r')
+    global ETHER_types, LSAP_types, IPprotocols, TCPports, UDPports  # Prikaz "global"
+    FILE_PROTOKOLY = open('protokoly.txt', 'r')                      # aby zapisoval do glabalnych premennich
 
     type_of_protocol = ""
     for line in FILE_PROTOKOLY:
@@ -53,18 +54,26 @@ def protocol_initialization():
 
     FILE_PROTOKOLY.close()
 
+
+def transforme_to_IP_adress(hex_adres):
+    adr1 = int(hex_adres[0:2], 16)
+    adr2 = int(hex_adres[2:4], 16)
+    adr3 = int(hex_adres[4:6], 16)
+    adr4 = int(hex_adres[6:8], 16)
+    str_adress = str(adr1) + "." + str(adr2) + "." + str(adr3) + "." + str(adr4)   # Vytori string adrese
+    return str_adress
+
+
 def add_IPv4_to_list(hex_packet):
     global source_IPv4_adresses
-    adr1 = int(hex_packet[52:54], 16)
-    adr2 = int(hex_packet[54:56], 16)
-    adr3 = int(hex_packet[56:58], 16)
-    adr4 = int(hex_packet[58:60], 16)
-    adress_str = str(adr1) + "." + str(adr2) + "." + str(adr3) + "." + str(adr4)  # Vytori string adrese
+
+    adress_str = transforme_to_IP_adress(hex_packet[52:60])  # Vytori string adrese
 
     if source_IPv4_adresses.__contains__(adress_str): # Ak adresu uz ma v slovniku, tak ikrementuje vyskity
         source_IPv4_adresses[adress_str] += 1
     else:
         source_IPv4_adresses[adress_str] = 1        # Ked adresa sa vyskitne prvykrat
+    # Vypis zdrojovej a cielovej IP adrese
 
 def find_ether_type(hex_packet):
     # Hlada v slovniku nazov protokolu (ktore cerpal z databaze/textaku "protokoly.txt")
@@ -152,7 +161,9 @@ for filename in files:
 
         # Vypis vnoreneho protokola
         FILE_VYPIS.write(vnoreny_protokol + "\n")
-
+        if vnoreny_protokol == "IPv4":
+            FILE_VYPIS.write("zdrojova IP adresa: " + transforme_to_IP_adress(hex_packet[52:60]) + "\n")
+            FILE_VYPIS.write("cielova IP adresa: " + transforme_to_IP_adress(hex_packet[60:68]) + "\n")
         # Vypis celeho ramca
         for i in range(dlzka_ramca):    # Iterujem cez kazdy dajt
             str1 = hex_packet[i * 2]
