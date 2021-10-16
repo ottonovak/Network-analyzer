@@ -63,6 +63,28 @@ def transforme_to_IP_adress(hex_adres):
     str_adress = str(adr1) + "." + str(adr2) + "." + str(adr3) + "." + str(adr4)   # Vytori string adrese
     return str_adress
 
+def write_TCP_type_port(hex_packet):
+    hex_protocol = hex_packet[68:72]
+    index_dictionary = int(hex_protocol, 16)
+
+    if TCPports.__contains__(index_dictionary):  # Preverii ak taky port bol vobec uvedeni databaze
+        FILE_VYPIS.write(TCPports[index_dictionary] + "\n")
+        FILE_VYPIS.write("zdrojovy port: " + str(int(hex_packet[68:72], 16)) + "\n")
+        FILE_VYPIS.write("cielovy port: " + str(int(hex_packet[72:76], 16)) + "\n")
+    else:
+        FILE_VYPIS.write("Tento TCP port nie je uvedeny v databaze")
+
+def write_UDP_type_port(hex_packet):
+    hex_protocol = hex_packet[68:72]
+    index_dictionary = int(hex_protocol, 16)
+
+    if UDPports.__contains__(index_dictionary):  # Preverii ak taky port bol vobec uvedeni databaze
+        FILE_VYPIS.write(UDPports[index_dictionary] + "\n")
+        FILE_VYPIS.write("zdrojovy port: " + str(int(hex_packet[68:72], 16)) + "\n")
+        FILE_VYPIS.write("cielovy port: " + str(int(hex_packet[72:76], 16)) + "\n")
+    else:
+        FILE_VYPIS.write("Tento UDP port nie je uvedeny v databaze")
+
 
 def add_IPv4_adress_to_list(hex_packet):
     global source_IPv4_adresses
@@ -99,14 +121,22 @@ def find_lsap_type(hex_packet):
     else:
         return "Tento LSAP nie je uvedeny v databaze"
 
-def find_IPv4_type(hex_protocol):
+def write_IPv4_type_port(hex_packet):
     # Hlada v slovniku nazov protokolu (ktore cerpal z databaze/textaku "protokoly.txt")
+    hex_protocol = hex_packet[46:48]
     index_dictionary = int(hex_protocol, 16)
 
     if IPprotocols.__contains__(index_dictionary):  # Preverii ak taky protokol bol vobec uvedeni databaze
-        return IPprotocols[index_dictionary]
+        FILE_VYPIS.write(IPprotocols[index_dictionary] + "\n")
+
+        if IPprotocols[index_dictionary] == "TCP":
+            write_TCP_type_port(hex_packet)
+
+        if IPprotocols[index_dictionary] == "UDP":
+            write_UDP_type_port(hex_packet)
+
     else:
-        return "Tento IP protokol nie je uvedeny v databaze"
+        FILE_VYPIS.write("Tento IP protokol nie je uvedeny v databaze")
 
 
 protocol_initialization()
@@ -180,7 +210,7 @@ for filename in files:
             FILE_VYPIS.write("cielova IP adresa: " + transforme_to_IP_adress(hex_packet[60:68]) + "\n")
 
             # Vypis IPv4 protokola
-            FILE_VYPIS.write(find_IPv4_type(hex_packet[46:48]) + "\n")
+            write_IPv4_type_port(hex_packet)
 
         # Vypis celeho ramca
         for i in range(dlzka_ramca):    # Iterujem cez kazdy dajt
