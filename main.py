@@ -12,6 +12,7 @@ IPprotocols = {}
 TCPports = {}
 UDPports = {}
 sourceIPadresses = {}
+FILE_VYPIS = open(r"vypis.txt", "w")
 
 def protocol_initialization():
     global ETHER_types, LSAP_types, IPprotocols, TCPports, UDPports # Prikaz "global" aby zapisoval do glabalnych premennich
@@ -92,7 +93,7 @@ for (dirpath, dirnames, filenames) in walk("./subory_na_analyzu"):
     files.extend(filenames)
 
 for filename in files:
-    FILE_VYPIS = open(r"vypis.txt", "w")
+
     FILE_VYPIS.write("\n<<<<<<<< Analyzujes subor " + filename + " >>>>>>>>\n")
     packets = rdpcap(f"./subory_na_analyzu/{filename}")
 
@@ -166,18 +167,12 @@ for filename in files:
 
 
 
-    FILE_VYPIS.close()
 
+FILE_VYPIS.write("Zoznam IP adries vsetkych odosielajucich uzlov: \n")
+for adress in sourceIPadresses:
+    FILE_VYPIS.write(adress + "\n")
 
-#for adresa in sourceIPadresses:
-    #print(adresa)
+most_often_IPadress = max(sourceIPadresses, key=sourceIPadresses.get)
+FILE_VYPIS.write("\nIP adresa uzla, ktora odoslala najvacsi pocet paketov: "+ str(most_often_IPadress) + " - " + str(sourceIPadresses[most_often_IPadress]) + " uzlov")
 
-
-sorted_tuples = sorted(sourceIPadresses.items(), key=lambda item: item[1])
-for adress in sorted_tuples:
-    print(adress)
-
-
-
-max_key = max(sourceIPadresses, key=sourceIPadresses.get)
-print("Most offten source IP adress: "+ max_key)
+FILE_VYPIS.close()
