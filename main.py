@@ -63,6 +63,7 @@ def transforme_to_IP_adress(hex_adres):
     str_adress = str(adr1) + "." + str(adr2) + "." + str(adr3) + "." + str(adr4)   # Vytori string adrese
     return str_adress
 
+
 def write_TCP_type_port(hex_packet):
     hex_protocol = hex_packet[68:72]
     index_dictionary = int(hex_protocol, 16)
@@ -72,7 +73,8 @@ def write_TCP_type_port(hex_packet):
         FILE_VYPIS.write("zdrojovy port: " + str(int(hex_packet[68:72], 16)) + "\n")
         FILE_VYPIS.write("cielovy port: " + str(int(hex_packet[72:76], 16)) + "\n")
     else:
-        FILE_VYPIS.write("Tento TCP port nie je uvedeny v databaze")
+        FILE_VYPIS.write("Tento TCP port nie je uvedeny v databaze\n")
+
 
 def write_UDP_type_port(hex_packet):
     hex_protocol = hex_packet[68:72]
@@ -83,7 +85,7 @@ def write_UDP_type_port(hex_packet):
         FILE_VYPIS.write("zdrojovy port: " + str(int(hex_packet[68:72], 16)) + "\n")
         FILE_VYPIS.write("cielovy port: " + str(int(hex_packet[72:76], 16)) + "\n")
     else:
-        FILE_VYPIS.write("Tento UDP port nie je uvedeny v databaze")
+        FILE_VYPIS.write("Tento UDP port nie je uvedeny v databaze\n")
 
 
 def add_IPv4_adress_to_list(hex_packet):
@@ -121,6 +123,7 @@ def find_lsap_type(hex_packet):
     else:
         return "Tento LSAP nie je uvedeny v databaze"
 
+
 def write_IPv4_type_port(hex_packet):
     # Hlada v slovniku nazov protokolu (ktore cerpal z databaze/textaku "protokoly.txt")
     hex_protocol = hex_packet[46:48]
@@ -134,106 +137,126 @@ def write_IPv4_type_port(hex_packet):
 
         if IPprotocols[index_dictionary] == "UDP":
             write_UDP_type_port(hex_packet)
+    else:
+        FILE_VYPIS.write("Tento IP protokol nie je uvedeny v databaze\n")
+
+
+def read_files():
+    for (dirpath, dirnames, filenames) in walk("./subory_na_analyzu"):
+        # Program cita vsetky subory z priecinku "subory_na_analyzu"
+        files.extend(filenames)
+    return files
+
+
+def write_type_of_frame(hex_packet):
+    # Vypis typu ramca (– Ethernet II, IEEE 802.3 (IEEE 802.3 s LLC, IEEE 802.3 s LLC a SNAP, IEEE 802.3 - Raw)
+    str1 = hex_packet[24:28]
+    str2 = hex_packet[28:30]
+    vnoreny_protokol = ""
+
+    if int(str1, 16) > 1500:
+        FILE_VYPIS.write("Ethernet II\n")
+        vnoreny_protokol = find_ether_type(hex_packet)
+
+    elif str2.decode() == "ff" or str2.decode() == "FF":
+        FILE_VYPIS.write("IEEE 802.3 - Raw\n")
+        vnoreny_protokol = "IPX"
+
+    elif str2.decode() == "aa" or str2.decode() == "AA":
+        FILE_VYPIS.write("IEEE 802.3 s LLC a SNAP\n")
+        vnoreny_protokol = find_lsap_type(hex_packet)
 
     else:
-        FILE_VYPIS.write("Tento IP protokol nie je uvedeny v databaze")
+        FILE_VYPIS.write("IEEE 802.3 LLC\n")
+        vnoreny_protokol = find_lsap_type(hex_packet)
+
+    return vnoreny_protokol
 
 
-protocol_initialization()
-
-for (dirpath, dirnames, filenames) in walk("./subory_na_analyzu"):
-    # Program cita vsetky subory z priecinku "subory_na_analyzu"
-    files.extend(filenames)
-
-for filename in files:
-
-    FILE_VYPIS.write("\n<<<<<<<< Analyzujes subor " + filename + " >>>>>>>>\n")
-    packets = rdpcap(f"./subory_na_analyzu/{filename}")
-
-    index_frame = 1
-
-    for packet in packets:
-        # Vypis ramca (Poradové číslo rámca v analyzovanom súbore)
-        FILE_VYPIS.write("rámec " + str(index_frame) + "\n")
-        index_frame += 1
-        vnoreny_protokol = ""
-
-        # Vypis dlzonk (Dĺžku rámca v bajtoch poskytnutú pcap API a dĺžku tohto rámca prenášaného po médiu)
-        dlzka_ramca = len(packet)
-        FILE_VYPIS.write("dlzka ramca poskytnuta pcap API - " + str(dlzka_ramca) + "B\n")
-        FILE_VYPIS.write("dlzka ramca prenasaneho po mediu – " + str(max(64, dlzka_ramca + 4)) + "B\n")
-
-        # Vypis typu ramca (– Ethernet II, IEEE 802.3 (IEEE 802.3 s LLC, IEEE 802.3 s LLC a SNAP, IEEE 802.3 - Raw)
-        hex_packet = bytes_hex(packet)
-        str1 = hex_packet[24:28]
-        str2 = hex_packet[28:30]
-
-        if int(str1, 16) > 1500:
-            FILE_VYPIS.write("Ethernet II\n")
-            vnoreny_protokol = find_ether_type(hex_packet)
-
-        elif str2.decode() == "ff" or str2.decode() == "FF":
-            FILE_VYPIS.write("IEEE 802.3 - Raw\n")
-            vnoreny_protokol = "IPX"
-
-        elif str2.decode() == "aa" or str2.decode() == "AA":
-            FILE_VYPIS.write("IEEE 802.3 s LLC a SNAP\n")
-            vnoreny_protokol = find_lsap_type(hex_packet)
-
-        else:
-            FILE_VYPIS.write("IEEE 802.3 LLC\n")
-            vnoreny_protokol = find_lsap_type(hex_packet)
-
-        # Vypis adres (Zdrojovú a cieľovú fyzickú (MAC) adresu uzlov, medzi ktorými je rámec prenášaný)
-        # Vypis zdrojovej MAC adresy
+def write_MAC_adress(hex_packet, x):   # x znazornuje bit odkial zacne adresa cilova/zdrojova
+    if x == 12:
         FILE_VYPIS.write("Zdrojova MAC adresa: ")
-        for i in range(6):
-            if i != 5:
-                FILE_VYPIS.write(chr(hex_packet[i * 2 + 12]) + chr(hex_packet[i * 2 + 13]) + " ")
-            else:
-                FILE_VYPIS.write(chr(hex_packet[i * 2 + 12]) + chr(hex_packet[i * 2 + 13]) + "\n")
-
-        # Vypis cielovej MAC adresy
+    elif x == 0:
         FILE_VYPIS.write("Cielova MAC adresa: ")
-        for i in range(6):
-            if i != 5:
-                FILE_VYPIS.write(chr(hex_packet[i * 2]) + chr(hex_packet[i * 2 + 1]) + " ")
-            else:
-                FILE_VYPIS.write(chr(hex_packet[i * 2]) + chr(hex_packet[i * 2 + 1]) + "\n")
 
-        # Vypis vnoreneho protokola
-        FILE_VYPIS.write(vnoreny_protokol + "\n")
+    for i in range(6):
+        if i != 5:
+            FILE_VYPIS.write(chr(hex_packet[i * 2 + x]) + chr(hex_packet[i * 2 + 1 + x]) + " ")
+        else:
+            FILE_VYPIS.write(chr(hex_packet[i * 2 + x]) + chr(hex_packet[i * 2 + + 1 + x]) + "\n")
 
-        # Vypis cielovej a zdrojovej IP adrese
-        if vnoreny_protokol == "IPv4":
-            FILE_VYPIS.write("zdrojova IP adresa: " + transforme_to_IP_adress(hex_packet[52:60]) + "\n")
-            FILE_VYPIS.write("cielova IP adresa: " + transforme_to_IP_adress(hex_packet[60:68]) + "\n")
 
-            # Vypis IPv4 protokola
-            write_IPv4_type_port(hex_packet)
+def write_entire_packet(hex_packet, dlzka_ramca):
+    for i in range(dlzka_ramca):  # Iterujem cez kazdy dajt
+        str1 = hex_packet[i * 2]
+        str2 = hex_packet[i * 2 + 1]
 
-        # Vypis celeho ramca
-        for i in range(dlzka_ramca):    # Iterujem cez kazdy dajt
-            str1 = hex_packet[i * 2]
-            str2 = hex_packet[i * 2 + 1]
+        if i % 16 == 15:  # Pre posledny riadok
+            FILE_VYPIS.write(chr(str1) + chr(str2) + "\n")
+        elif i % 8 == 0 and i != 0 and i % 16 != 0:  # Pre oddelenie v prostriedku riadku
+            FILE_VYPIS.write(" " + chr(str1) + chr(str2) + " ")
+        elif i == dlzka_ramca - 1:  # Pre osetrenie medzery za poslednym bajtom
+            FILE_VYPIS.write(chr(str1) + chr(str2) + "\n\n")
+        else:  # Pre vsetky ine
+            FILE_VYPIS.write(chr(str1) + chr(str2) + " ")
 
-            if i % 16 == 15:                                # Pre posledny riadok
-                FILE_VYPIS.write(chr(str1) + chr(str2) + "\n")
-            elif i % 8 == 0 and i != 0 and i % 16 != 0:     # Pre oddelenie v prostriedku riadku
-                FILE_VYPIS.write(" " + chr(str1) + chr(str2) + " ")
-            elif i == dlzka_ramca - 1:                      # Pre osetrenie medzery za poslednym bajtom
-                FILE_VYPIS.write(chr(str1) + chr(str2) + "\n\n")
-            else:                                           # Pre vsetky ine
-                FILE_VYPIS.write(chr(str1) + chr(str2) + " ")
 
-# Zoradi IPv4 adresy zostupne podla poctu odoslanych ramcov
-source_IPv4_adresses = dict(sorted(source_IPv4_adresses.items(), key = operator.itemgetter(1), reverse=True))
+def analyze_files(files):
+    global source_IPv4_adresses
+    for filename in files:
 
-FILE_VYPIS.write("Zoznam IPv4 adries vsetkych odosielajucich uzlov: \n")
-for adress in source_IPv4_adresses:
-    FILE_VYPIS.write(adress +"\n") # ak chces vypisat aj pocet vyskitov pridaj + " " + str(source_IPv4_adresses[adress])
+        FILE_VYPIS.write("\n<<<<<<<< Analyzujes subor " + filename + " >>>>>>>>\n")
+        packets = rdpcap(f"./subory_na_analyzu/{filename}")
 
-most_often_IPv4adress = max(source_IPv4_adresses, key=source_IPv4_adresses.get)
-FILE_VYPIS.write("\nIPv4 adresa uzla, ktora odoslala najvacsi pocet paketov: "+ str(most_often_IPv4adress) + " - " + str(source_IPv4_adresses[most_often_IPv4adress]) + " uzlov")
+        index_frame = 1
 
-FILE_VYPIS.close()
+        for packet in packets:
+            # Vypis ramca (Poradové číslo rámca v analyzovanom súbore)
+            FILE_VYPIS.write("ramec " + str(index_frame) + "\n")
+            index_frame += 1
+            hex_packet = bytes_hex(packet)
+
+            # Vypis dlzonk (Dĺžku rámca v bajtoch poskytnutú pcap API a dĺžku tohto rámca prenášaného po médiu)
+            dlzka_ramca = len(packet)
+            FILE_VYPIS.write("dlzka ramca poskytnuta pcap API - " + str(dlzka_ramca) + "B\n")
+            FILE_VYPIS.write("dlzka ramca prenasaneho po mediu - " + str(max(64, dlzka_ramca + 4)) + "B\n")
+
+            # Vypis typu ramca (– Ethernet II, IEEE 802.3 (IEEE 802.3 s LLC, IEEE 802.3 s LLC a SNAP, IEEE 802.3 - Raw)
+            vnoreny_protokol = write_type_of_frame(hex_packet)
+
+            # Vypis adres (Zdrojovú a cieľovú fyzickú (MAC) adresu uzlov, medzi ktorými je rámec prenášaný)
+            write_MAC_adress(hex_packet, 12) # 12 (bitov) =  zdrojova MAC adresa
+            write_MAC_adress(hex_packet, 0)  # 0 (bitov) =  cielova MAC adresa
+
+            # Vypis vnoreneho protokola
+            FILE_VYPIS.write(vnoreny_protokol + "\n")
+
+            # Vypis cielovej a zdrojovej IP adrese
+            if vnoreny_protokol == "IPv4":
+                FILE_VYPIS.write("zdrojova IP adresa: " + transforme_to_IP_adress(hex_packet[52:60]) + "\n")
+                FILE_VYPIS.write("cielova IP adresa: " + transforme_to_IP_adress(hex_packet[60:68]) + "\n")
+
+                write_IPv4_type_port(hex_packet)    # Vypis IPv4 protokola
+
+            # Vypis celeho ramca
+            write_entire_packet(hex_packet, dlzka_ramca)
+
+
+    # Zoradi IPv4 adresy zostupne podla poctu odoslanych ramcov
+    source_IPv4_adresses = dict(sorted(source_IPv4_adresses.items(), key = operator.itemgetter(1), reverse=True))
+
+    FILE_VYPIS.write("Zoznam IPv4 adries vsetkych odosielajucich uzlov:\n     Adresa      Vyskitnutia\n")
+    for adress in source_IPv4_adresses:
+        FILE_VYPIS.write(adress + "  -  " + str(source_IPv4_adresses[adress]) + "\n") # ak chces vypisat aj pocet vyskitov pridaj + " " + str(source_IPv4_adresses[adress])
+
+    most_often_IPv4adress = max(source_IPv4_adresses, key=source_IPv4_adresses.get)
+    FILE_VYPIS.write("\nIPv4 adresa uzla, ktora odoslala najvacsi pocet paketov: "+ str(most_often_IPv4adress) + " - " + str(source_IPv4_adresses[most_often_IPv4adress]) + " uzlov")
+
+
+
+if __name__ == "__main__":
+    protocol_initialization()
+    files = read_files()
+    analyze_files(files)
+
+    FILE_VYPIS.close()
