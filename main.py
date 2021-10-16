@@ -8,12 +8,13 @@ import hashlib
 files = []
 ETHER_types = {}
 LSAP_types = {}
-IPprotocolNumbers = {}
+IPprotocols = {}
 TCPports = {}
 UDPports = {}
+sourceIPadresses = {}
 
-def inicializacia_protokolov():
-    global ETHER_types, LSAP_types, IPprotocolNumbers, TCPports, UDPports # Prikaz "global" aby zapisoval do glabalnych premennich
+def protocol_initialization():
+    global ETHER_types, LSAP_types, IPprotocols, TCPports, UDPports # Prikaz "global" aby zapisoval do glabalnych premennich
     FILE_PROTOKOLY = open('protokoly.txt', 'r')
 
     type_of_protocol = ""
@@ -41,7 +42,7 @@ def inicializacia_protokolov():
             LSAP_types[str1_int] = nested_protocol
 
         elif type_of_protocol == "IP":
-            IPprotocolNumbers[str1_int] = nested_protocol
+            IPprotocols[str1_int] = nested_protocol
 
         elif type_of_protocol == "TCP":
             TCPports[str1_int] = nested_protocol
@@ -51,12 +52,25 @@ def inicializacia_protokolov():
 
     FILE_PROTOKOLY.close()
 
+def add_ip_to_list(hex_packet):
+    adr1 = int(hex_packet[56:58], 16)
+    adr2 = int(hex_packet[58:60], 16)
+    adr3 = int(hex_packet[60:62], 16)
+    adr4 = int(hex_packet[62:64], 16)
+
+    adress_str = str(adr1) + "." + str(adr2) + "." + str(adr3) + "." + str(adr4) # Vytori string adrese
+    if sourceIPadresses.__contains__(adress_str):   # Ak adresa sa nachadza v slovniku, pripocita pocet vyskitnutii
+        sourceIPadresses[adress_str] += 1
+    else:
+        sourceIPadresses[adress_str] = 1            # Ked adresa sa 1x vyskitla
+
 def find_ether_type(hex_packet):
     # Hlada v slovniku nazov protokolu (ktore cerpal z databaze/textaku "protokoly.txt")
     str1 = hex_packet[24:28]
     index_dictionary = int(str1.decode(), 16)
 
     if ETHER_types.__contains__(index_dictionary):  # Preverii ak taky protokol bol vobec uvedeni databaze
+        add_ip_to_list(hex_packet)
         return ETHER_types[index_dictionary]
     else:
         return "Tento Ethertype nie je uvedeny v databaze"
@@ -71,7 +85,7 @@ def find_lsap_type(hex_packet):
     else:
         return "Tento LSAP nie je uvedeny v databaze"
 
-inicializacia_protokolov()
+protocol_initialization()
 
 for (dirpath, dirnames, filenames) in walk("./subory_na_analyzu"):
     # Program cita vsetky subory z priecinku "subory_na_analyzu"
@@ -150,4 +164,20 @@ for filename in files:
             else:                                           # Pre vsetky ine
                 FILE_VYPIS.write(chr(str1) + chr(str2) + " ")
 
+
+
     FILE_VYPIS.close()
+
+
+#for adresa in sourceIPadresses:
+    #print(adresa)
+
+
+sorted_tuples = sorted(sourceIPadresses.items(), key=lambda item: item[1])
+for adress in sorted_tuples:
+    print(adress)
+
+
+
+max_key = max(sourceIPadresses, key=sourceIPadresses.get)
+print("Most offten source IP adress: "+ max_key)
