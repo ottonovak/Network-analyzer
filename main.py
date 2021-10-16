@@ -64,7 +64,7 @@ def transforme_to_IP_adress(hex_adres):
     return str_adress
 
 
-def add_IPv4_to_list(hex_packet):
+def add_IPv4_adress_to_list(hex_packet):
     global source_IPv4_adresses
 
     adress_str = transforme_to_IP_adress(hex_packet[52:60])  # Vytori string adrese
@@ -75,6 +75,7 @@ def add_IPv4_to_list(hex_packet):
         source_IPv4_adresses[adress_str] = 1        # Ked adresa sa vyskitne prvykrat
     # Vypis zdrojovej a cielovej IP adrese
 
+
 def find_ether_type(hex_packet):
     # Hlada v slovniku nazov protokolu (ktore cerpal z databaze/textaku "protokoly.txt")
     str1 = hex_packet[24:28]
@@ -82,10 +83,11 @@ def find_ether_type(hex_packet):
 
     if ETHER_types.__contains__(index_dictionary):  # Preverii ak taky protokol bol vobec uvedeni databaze
         if ETHER_types[index_dictionary] == "IPv4":
-            add_IPv4_to_list(hex_packet)
+            add_IPv4_adress_to_list(hex_packet)
         return ETHER_types[index_dictionary]
     else:
         return "Tento Ethertype nie je uvedeny v databaze"
+
 
 def find_lsap_type(hex_packet):
     # Hlada v slovniku nazov protokolu (ktore cerpal z databaze/textaku "protokoly.txt")
@@ -96,6 +98,16 @@ def find_lsap_type(hex_packet):
         return LSAP_types[index_dictionary]
     else:
         return "Tento LSAP nie je uvedeny v databaze"
+
+def find_IPv4_type(hex_protocol):
+    # Hlada v slovniku nazov protokolu (ktore cerpal z databaze/textaku "protokoly.txt")
+    index_dictionary = int(hex_protocol, 16)
+
+    if IPprotocols.__contains__(index_dictionary):  # Preverii ak taky protokol bol vobec uvedeni databaze
+        return IPprotocols[index_dictionary]
+    else:
+        return "Tento IP protokol nie je uvedeny v databaze"
+
 
 protocol_initialization()
 
@@ -161,9 +173,15 @@ for filename in files:
 
         # Vypis vnoreneho protokola
         FILE_VYPIS.write(vnoreny_protokol + "\n")
+
+        # Vypis cielovej a zdrojovej IP adrese
         if vnoreny_protokol == "IPv4":
             FILE_VYPIS.write("zdrojova IP adresa: " + transforme_to_IP_adress(hex_packet[52:60]) + "\n")
             FILE_VYPIS.write("cielova IP adresa: " + transforme_to_IP_adress(hex_packet[60:68]) + "\n")
+
+            # Vypis IPv4 protokola
+            FILE_VYPIS.write(find_IPv4_type(hex_packet[46:48]) + "\n")
+
         # Vypis celeho ramca
         for i in range(dlzka_ramca):    # Iterujem cez kazdy dajt
             str1 = hex_packet[i * 2]
