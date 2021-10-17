@@ -70,10 +70,10 @@ def pridaj_http_komunikaciu(key, value):
     else:
         HTTP_communications[key].append(value)
 
-    for communication in HTTP_communications:
-        print("HTTP komunikacie")
-        for ramec in HTTP_communications[communication]:
-            print("ramce: " + str(ramec[0]))
+#    for communication in HTTP_communications:
+#        print("HTTP komunikacie")
+#        for ramec in HTTP_communications[communication]:
+#            print("ramce: " + str(ramec[0]))
 
 
 def http_komunikacia(ip_src, ip_dst, tcp_port_src, tcp_port_dst, index_frame, hex_ramec):
@@ -109,32 +109,28 @@ def transforme_to_IP_adress(hex_adres):
 
 
 def write_TCP_type_port(hex_packet, index_frame):
-    hex_source = hex_packet[68:72]
-    hex_destination = hex_packet[72:76]
-    index_source = int(hex_source, 16)
-    index_destination = int(hex_destination, 16)
+    src_port = int(hex_packet[68:72], 16)
+    dst_port = int(hex_packet[72:76], 16)
+    src_ip = transforme_to_IP_adress(hex_packet[52:60])
+    dst_ip = transforme_to_IP_adress(hex_packet[60:68])
 
-    if TCPports.__contains__(index_source):  # Preverii ak taky port bol vobec uvedeni databaze
-        FILE_VYPIS.write(TCPports[index_source] + "\n")
-        FILE_VYPIS.write("zdrojovy port: " + str(int(hex_packet[68:72], 16)) + "\n")
-        FILE_VYPIS.write("cielovy port: " + str(int(hex_packet[72:76], 16)) + "\n")
+    if TCPports.__contains__(src_port):  # Preverii ak taky port bol vobec uvedeni databaze
+        FILE_VYPIS.write(TCPports[src_port] + "\n")
+        FILE_VYPIS.write("zdrojovy port: " + str(src_port) + "\n")
+        FILE_VYPIS.write("cielovy port: " + str(dst_port) + "\n")
 
-        src_ip = transforme_to_IP_adress(hex_packet[52:60])
-        dst_ip = transforme_to_IP_adress(hex_packet[60:68])
-        #print(str(index_frame) +" : "+ str(int(hex_packet[68:72])))
-        if TCPports[index_source] == "HTTP":
-            http_komunikacia(src_ip, dst_ip, index_source, index_destination, index_frame, hex_packet)
+        if TCPports[src_port] == "HTTP":
+            print(str(index_frame) + " : " + str(src_port) + " " + str(dst_port))
+            http_komunikacia(src_ip, dst_ip, src_port, dst_port, index_frame, hex_packet)
 
-    elif TCPports.__contains__(index_destination):
-        FILE_VYPIS.write(TCPports[index_destination] + "\n")
-        FILE_VYPIS.write("zdrojovy port: " + str(int(hex_packet[68:72], 16)) + "\n")
-        FILE_VYPIS.write("cielovy port: " + str(int(hex_packet[72:76], 16)) + "\n")
+    elif TCPports.__contains__(dst_port):
+        FILE_VYPIS.write(TCPports[dst_port] + "\n")
+        FILE_VYPIS.write("zdrojovy port: " + str(src_port) + "\n")
+        FILE_VYPIS.write("cielovy port: " + str(dst_port) + "\n")
 
-        src_ip = transforme_to_IP_adress(hex_packet[52:60])
-        dst_ip = transforme_to_IP_adress(hex_packet[60:68])
-        #print(str(index_frame) +" : "+ str(index_destination))
-        if TCPports[index_destination] == "HTTP":
-            http_komunikacia(src_ip, dst_ip, index_source, index_destination, index_frame, hex_packet)
+        if TCPports[dst_port] == "HTTP":
+            print(str(index_frame) +" : "+ str(src_port) + " " +str(dst_port))
+            http_komunikacia(src_ip, dst_ip, src_port, dst_port, index_frame, hex_packet)
 
 
     else:
@@ -153,7 +149,7 @@ def write_UDP_type_port(hex_packet):
         FILE_VYPIS.write("Tento UDP port nie je uvedeny v databaze\n")
 
 
-def add_IPv4_adress_to_list(hex_packet):
+def add_source_IPv4_adress_to_list(hex_packet):
     global source_IPv4_addresses
 
     adress_str = transforme_to_IP_adress(hex_packet[52:60])  # Vytori string adrese
@@ -161,7 +157,7 @@ def add_IPv4_adress_to_list(hex_packet):
         source_IPv4_addresses[adress_str] += 1
     else:
         source_IPv4_addresses[adress_str] = 1        # Ked adresa sa vyskitne prvykrat
-    # Vypis zdrojovej a cielovej IP adrese
+
 
 
 def find_ether_type(hex_packet):
@@ -171,7 +167,7 @@ def find_ether_type(hex_packet):
 
     if ETHER_types.__contains__(index_dictionary):  # Preverii ak taky protokol bol vobec uvedeni databaze
         if ETHER_types[index_dictionary] == "IPv4":
-            add_IPv4_adress_to_list(hex_packet)
+            add_source_IPv4_adress_to_list(hex_packet)
         return ETHER_types[index_dictionary]
     else:
         return "Tento Ethertype nie je uvedeny v databaze"
@@ -190,12 +186,12 @@ def find_lsap_type(hex_packet):
 
 def write_IPv4_type_port(hex_packet, index_frame):
     # Hlada v slovniku nazov protokolu (ktore cerpal z databaze/textaku "protokoly.txt")
+
     hex_protocol = hex_packet[46:48]
     index_dictionary = int(hex_protocol, 16)
-    # TODO vypis Ip adresy pre vsetky IP
+
     if IPprotocols.__contains__(index_dictionary):  # Preverii ak taky protokol bol vobec uvedeni databaze
         FILE_VYPIS.write(IPprotocols[index_dictionary] + "\n")
-
         if IPprotocols[index_dictionary] == "TCP":
             write_TCP_type_port(hex_packet, index_frame)
 
@@ -271,12 +267,12 @@ def analyze_files(files):
 
         FILE_VYPIS.write("\n<<<<<<<< Analyzujes subor " + filename + " >>>>>>>>\n")
         packets = rdpcap(f"./subory_na_analyzu/{filename}")
-        index_frame = 1
+        index_frame = 0
 
         for packet in packets:
+            index_frame += 1
             # Vypis ramca (Poradové číslo rámca v analyzovanom súbore)
             FILE_VYPIS.write("ramec " + str(index_frame) + "\n")
-            index_frame += 1
             hex_packet = bytes_hex(packet)
 
             # Vypis dlzonk (Dĺžku rámca v bajtoch poskytnutú pcap API a dĺžku tohto rámca prenášaného po médiu)
@@ -288,8 +284,8 @@ def analyze_files(files):
             vnoreny_protokol = write_type_of_frame(hex_packet)
 
             # Vypis adres (Zdrojovú a cieľovú fyzickú (MAC) adresu uzlov, medzi ktorými je rámec prenášaný)
-            write_MAC_adress(hex_packet, 12) # 12 (bitov) =  zdrojova MAC adresa
-            write_MAC_adress(hex_packet, 0)  # 0 (bitov) =  cielova MAC adresa
+            write_MAC_adress(hex_packet, 12) # od 12. bit =  zdrojova MAC adresa
+            write_MAC_adress(hex_packet, 0)  # od 0. bit =  cielova MAC adresa
 
             # Vypis vnoreneho protokola
             FILE_VYPIS.write(vnoreny_protokol + "\n")
@@ -298,11 +294,11 @@ def analyze_files(files):
             if vnoreny_protokol == "IPv4":
                 FILE_VYPIS.write("zdrojova IP adresa: " + transforme_to_IP_adress(hex_packet[52:60]) + "\n")
                 FILE_VYPIS.write("cielova IP adresa: " + transforme_to_IP_adress(hex_packet[60:68]) + "\n")
-
                 write_IPv4_type_port(hex_packet, index_frame)    # Vypis IPv4 protokola
 
             # Vypis celeho ramca
             write_entire_packet(hex_packet, dlzka_ramca)
+
 
 
     # Zoradi IPv4 adresy zostupne podla poctu odoslanych ramcov
