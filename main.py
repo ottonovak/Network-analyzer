@@ -11,8 +11,13 @@ LSAP_types = {}
 IPprotocols = {}
 TCPports = {}
 UDPports = {}
-source_IPv4_adresses = {}
-FILE_VYPIS = open(r"vypis.txt", "w")
+source_IPv4_addresses = {}
+HTTP_communications = {}
+HTTPS_communications = {}
+TELNET_communications = {}
+SSH_communications = {}
+FTP_riadiace_communications = {}
+FTP_datove_communications = {}
 
 
 def protocol_initialization():
@@ -55,6 +60,45 @@ def protocol_initialization():
     FILE_PROTOKOLY.close()
 
 
+# TODO modify
+def pridaj_http_komunikaciu(key, value):
+    global HTTP_communications
+    if len(HTTP_communications[key]) >= 20:
+        for i in range(10, 19):
+            HTTP_communications[key][i] = HTTP_communications[key][i + 1]
+        HTTP_communications[key][19] = value
+    else:
+        HTTP_communications[key].append(value)
+
+    for communication in HTTP_communications:
+        print("HTTP komunikacie")
+        for ramec in HTTP_communications[communication]:
+            print("ramce: " + str(ramec[0]))
+
+
+def http_komunikacia(ip_src, ip_dst, tcp_port_src, tcp_port_dst, index_frame, hex_ramec):
+    global HTTP_communications
+    # Unikatne pre kazdu komunikaciu: {srcIP, dstIP, srcPort, dstPort} : {cislo, ramec} = {dstIP, srcIP, dstPort, srcPort}
+
+    if not HTTP_communications.__contains__(
+            f"{ip_src}-{ip_dst}-{tcp_port_src}-{tcp_port_dst}") and not HTTP_communications.__contains__(
+            f"{ip_dst}-{ip_src}-{tcp_port_dst}-{tcp_port_src}"):
+        HTTP_communications[f"{ip_src}-{ip_dst}-{tcp_port_src}-{tcp_port_dst}"] = list()
+        pridaj_http_komunikaciu(f"{ip_src}-{ip_dst}-{tcp_port_src}-{tcp_port_dst}", [index_frame, hex_ramec])
+    elif HTTP_communications.__contains__(f"{ip_src}-{ip_dst}-{tcp_port_src}-{tcp_port_dst}"):
+        pridaj_http_komunikaciu(f"{ip_src}-{ip_dst}-{tcp_port_src}-{tcp_port_dst}", [index_frame, hex_ramec])
+    elif HTTP_communications.__contains__(f"{ip_dst}-{ip_src}-{tcp_port_dst}-{tcp_port_src}"):
+        pridaj_http_komunikaciu(f"{ip_dst}-{ip_src}-{tcp_port_dst}-{tcp_port_src}", [index_frame, hex_ramec])
+
+
+
+
+    #for communication in HTTP_communications:
+        #print("ramec " + str(index_frame) + " -> komunikacia " + str(communication))
+
+# TODO finish modifiy a pridaj dalsiu funkciu
+
+
 def transforme_to_IP_adress(hex_adres):
     adr1 = int(hex_adres[0:2], 16)
     adr2 = int(hex_adres[2:4], 16)
@@ -64,16 +108,37 @@ def transforme_to_IP_adress(hex_adres):
     return str_adress
 
 
-def write_TCP_type_port(hex_packet):
-    hex_protocol = hex_packet[68:72]
-    index_dictionary = int(hex_protocol, 16)
+def write_TCP_type_port(hex_packet, index_frame):
+    hex_source = hex_packet[68:72]
+    hex_destination = hex_packet[72:76]
+    index_source = int(hex_source, 16)
+    index_destination = int(hex_destination, 16)
 
-    if TCPports.__contains__(index_dictionary):  # Preverii ak taky port bol vobec uvedeni databaze
-        FILE_VYPIS.write(TCPports[index_dictionary] + "\n")
+    if TCPports.__contains__(index_source):  # Preverii ak taky port bol vobec uvedeni databaze
+        FILE_VYPIS.write(TCPports[index_source] + "\n")
         FILE_VYPIS.write("zdrojovy port: " + str(int(hex_packet[68:72], 16)) + "\n")
         FILE_VYPIS.write("cielovy port: " + str(int(hex_packet[72:76], 16)) + "\n")
+
+        src_ip = transforme_to_IP_adress(hex_packet[52:60])
+        dst_ip = transforme_to_IP_adress(hex_packet[60:68])
+        #print(str(index_frame) +" : "+ str(int(hex_packet[68:72])))
+        if TCPports[index_source] == "HTTP":
+            http_komunikacia(src_ip, dst_ip, index_source, index_destination, index_frame, hex_packet)
+
+    elif TCPports.__contains__(index_destination):
+        FILE_VYPIS.write(TCPports[index_destination] + "\n")
+        FILE_VYPIS.write("zdrojovy port: " + str(int(hex_packet[68:72], 16)) + "\n")
+        FILE_VYPIS.write("cielovy port: " + str(int(hex_packet[72:76], 16)) + "\n")
+
+        src_ip = transforme_to_IP_adress(hex_packet[52:60])
+        dst_ip = transforme_to_IP_adress(hex_packet[60:68])
+        #print(str(index_frame) +" : "+ str(index_destination))
+        if TCPports[index_destination] == "HTTP":
+            http_komunikacia(src_ip, dst_ip, index_source, index_destination, index_frame, hex_packet)
+
+
     else:
-        FILE_VYPIS.write("Tento TCP port nie je uvedeny v databaze\n")
+        FILE_VYPIS.write("Taky TCP nei je uvedeny, port: "+ str(int(hex_packet[68:72], 16)) + "\n")
 
 
 def write_UDP_type_port(hex_packet):
@@ -89,14 +154,13 @@ def write_UDP_type_port(hex_packet):
 
 
 def add_IPv4_adress_to_list(hex_packet):
-    global source_IPv4_adresses
+    global source_IPv4_addresses
 
     adress_str = transforme_to_IP_adress(hex_packet[52:60])  # Vytori string adrese
-
-    if source_IPv4_adresses.__contains__(adress_str): # Ak adresu uz ma v slovniku, tak ikrementuje vyskity
-        source_IPv4_adresses[adress_str] += 1
+    if source_IPv4_addresses.__contains__(adress_str): # Ak adresu uz ma v slovniku, tak ikrementuje vyskity
+        source_IPv4_addresses[adress_str] += 1
     else:
-        source_IPv4_adresses[adress_str] = 1        # Ked adresa sa vyskitne prvykrat
+        source_IPv4_addresses[adress_str] = 1        # Ked adresa sa vyskitne prvykrat
     # Vypis zdrojovej a cielovej IP adrese
 
 
@@ -124,16 +188,16 @@ def find_lsap_type(hex_packet):
         return "Tento LSAP nie je uvedeny v databaze"
 
 
-def write_IPv4_type_port(hex_packet):
+def write_IPv4_type_port(hex_packet, index_frame):
     # Hlada v slovniku nazov protokolu (ktore cerpal z databaze/textaku "protokoly.txt")
     hex_protocol = hex_packet[46:48]
     index_dictionary = int(hex_protocol, 16)
-
+    # TODO vypis Ip adresy pre vsetky IP
     if IPprotocols.__contains__(index_dictionary):  # Preverii ak taky protokol bol vobec uvedeni databaze
         FILE_VYPIS.write(IPprotocols[index_dictionary] + "\n")
 
         if IPprotocols[index_dictionary] == "TCP":
-            write_TCP_type_port(hex_packet)
+            write_TCP_type_port(hex_packet, index_frame)
 
         if IPprotocols[index_dictionary] == "UDP":
             write_UDP_type_port(hex_packet)
@@ -202,12 +266,11 @@ def write_entire_packet(hex_packet, dlzka_ramca):
 
 
 def analyze_files(files):
-    global source_IPv4_adresses
+    global source_IPv4_addresses
     for filename in files:
 
         FILE_VYPIS.write("\n<<<<<<<< Analyzujes subor " + filename + " >>>>>>>>\n")
         packets = rdpcap(f"./subory_na_analyzu/{filename}")
-
         index_frame = 1
 
         for packet in packets:
@@ -236,25 +299,25 @@ def analyze_files(files):
                 FILE_VYPIS.write("zdrojova IP adresa: " + transforme_to_IP_adress(hex_packet[52:60]) + "\n")
                 FILE_VYPIS.write("cielova IP adresa: " + transforme_to_IP_adress(hex_packet[60:68]) + "\n")
 
-                write_IPv4_type_port(hex_packet)    # Vypis IPv4 protokola
+                write_IPv4_type_port(hex_packet, index_frame)    # Vypis IPv4 protokola
 
             # Vypis celeho ramca
             write_entire_packet(hex_packet, dlzka_ramca)
 
 
     # Zoradi IPv4 adresy zostupne podla poctu odoslanych ramcov
-    source_IPv4_adresses = dict(sorted(source_IPv4_adresses.items(), key = operator.itemgetter(1), reverse=True))
+    source_IPv4_addresses = dict(sorted(source_IPv4_addresses.items(), key = operator.itemgetter(1), reverse=True))
 
     FILE_VYPIS.write("Zoznam IPv4 adries vsetkych odosielajucich uzlov:\n     Adresa      Vyskitnutia\n")
-    for adress in source_IPv4_adresses:
-        FILE_VYPIS.write(adress + "  -  " + str(source_IPv4_adresses[adress]) + "\n") # ak chces vypisat aj pocet vyskitov pridaj + " " + str(source_IPv4_adresses[adress])
+    for adress in source_IPv4_addresses:
+        FILE_VYPIS.write(adress + "  -  " + str(source_IPv4_addresses[adress]) + "\n") # ak chces vypisat aj pocet vyskitov pridaj + " " + str(source_IPv4_adresses[adress])
 
-    most_often_IPv4adress = max(source_IPv4_adresses, key=source_IPv4_adresses.get)
-    FILE_VYPIS.write("\nIPv4 adresa uzla, ktora odoslala najvacsi pocet paketov: "+ str(most_often_IPv4adress) + " - " + str(source_IPv4_adresses[most_often_IPv4adress]) + " uzlov")
-
+    most_often_IPv4adress = max(source_IPv4_addresses, key=source_IPv4_addresses.get)
+    FILE_VYPIS.write("\nIPv4 adresa uzla, ktora odoslala najvacsi pocet paketov: " + str(most_often_IPv4adress) + " - " + str(source_IPv4_addresses[most_often_IPv4adress]) + " uzlov")
 
 
 if __name__ == "__main__":
+    FILE_VYPIS = open(r"vypis.txt", "w")
     protocol_initialization()
     files = read_files()
     analyze_files(files)
