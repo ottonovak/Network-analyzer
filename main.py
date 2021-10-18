@@ -293,83 +293,96 @@ def analyze_files(files):
     most_often_IPv4adress = max(source_IPv4_addresses, key=source_IPv4_addresses.get)
     FILE_VYPIS.write("\nIPv4 adresa uzla, ktora odoslala najvacsi pocet paketov: " + str(most_often_IPv4adress) + " - " + str(source_IPv4_addresses[most_often_IPv4adress]) + " uzlov")
 
-def find_start_communication(bin_flag):
+def find_start_communication(communication):
+    # Kontrola 3 way handshake
+    kolky_ramec = 0
     sw1 = 0
     sw2 = 0
     sw3_zacala_komunikacia = 0
 
-    # Kontrola 3 way handshake
-    if sw1 == 0:  # SYN
-        if bin_flag[-2] == "1":
-            sw1 = 1
-            continue
+    for ramec in HTTP_communications[communication]:
+        bin_flag = bin(int(ramec[1][92:96].decode(), 16))
+        # print("  SYN = " + bin_flag[-2] + " ACK = "+ bin_flag[-5] + " RST = " + bin_flag[-3] + " FIN = " + bin_flag[-1])
 
-    if sw1 == 1 and sw2 == 0:   # SYN a zaroven ACK
-        if bin_flag[-2] == "1" and bin_flag[-5] == "1":
-            sw2 = 1
-            continue
+        # Ked sa uz naslo
+        if sw3_zacala_komunikacia == 1:
+            return ["complete", kolky_ramec + 1]  # returnujem stav a nasledovny ramec
 
-    if sw2 == 1 and sw3_zacala_komunikacia == 0: # ACK
-        if bin_flag[-5] == "1":
-            print("Nasiel sa 3wh")
-            sw3_zacala_komunikacia = 1
-            continue  # Sa nasiel 3 way hadshake
+        if sw1 == 0:  # SYN
+            if bin_flag[-2] == "1":
+                sw1 = 1
+                continue
+
+        if sw1 == 1 and sw2 == 0:   # SYN a zaroven ACK
+            if bin_flag[-2] == "1" and bin_flag[-5] == "1":
+                sw2 = 1
+                continue
+
+        if sw2 == 1 and sw3_zacala_komunikacia == 0: # ACK
+            if bin_flag[-5] == "1":
+                print("Komunikacia zacala uspesne")
+                sw3_zacala_komunikacia = 1
+        kolky_ramec += 1
+
+    return ["incomplete", kolky_ramec]
+
+
+def find_end_communication(communication, ramec_pokracovat):
+    sw4 = 0
+    sw5 = 0
+    sw6 = 0
+    sw7_ukoncena_komunikacia = 0
+    for ramec in HTTP_communications[communication][ramec_pokracovat:]:
+        bin_flag = bin(int(ramec[1][92:96].decode(), 16))
+        # UKONCENIA KOMUNIKACIE
+        # ukon komunikacie RST
+        if sw4 == 0 and sw7_ukoncena_komunikacia == 0:  # RST
+            if bin_flag[-3] == "1":
+                sw7_ukoncena_komunikacia = 1
+                return "complete"
+
+        # ukoncenie komuniakcie - pripad FIN-ACK-FIN-ACK
+        if sw4 == 0 and sw7_ukoncena_komunikacia == 0:  # FIN
+            if bin_flag[-1] == "1":
+                sw4 = 1
+                continue
+
+        if sw4 == 1 and sw7_ukoncena_komunikacia == 0:  # ACK
+            if bin_flag[-5] == "1":
+                sw5 = 1
+                continue
+
+        if sw5 == 1and sw7_ukoncena_komunikacia == 0:  # FIN
+            if bin_flag[-1] == "1":
+                sw6 = 1
+                continue
+
+        if sw6 == 1 and sw7_ukoncena_komunikacia == 0:  # ACK
+            if bin_flag[-5] == "1":
+                sw7_ukoncena_komunikacia = 1
+                return "complete"
+
+        # RST ukoncena komunikacia pripad FIN-ACK-RST
+        if sw5 == 1 and sw6 == 0 and sw7_ukoncena_komunikacia == 0:
+            if bin_flag[-3] == "1":
+                sw7_ukoncena_komunikacia = 1
+                return "complete"
+
+    return "incomplete"
+
 
 def write_communication():
     global HTTP_communications
     for communication in HTTP_communications:
         print("\nHTTP komunikacia")
-        sw1 = 0
-        sw2 = 0
-        sw3_zacala_komunikacia = 0
-        sw4 = 0
-        sw5 = 0
-        sw6 = 0
-        sw7_ukoncena_komunikacia = 0
 
-        for ramec in HTTP_communications[communication]:
-            bin_flag = bin(int(ramec[1][92:96].decode(), 16))
-            write_communication(bin_flag)
-            #print("  SYN = " + bin_flag[-2] + " ACK = "+ bin_flag[-5] + " RST = " + bin_flag[-3] + " FIN = " + bin_flag[-1])
+        start = find_start_communication(communication)
+        if start[0] == "complete":
+            ramec_pokracovat = start[1]
+            end = find_end_communication(communication, ramec_pokracovat)
 
-
-            #UKONCENIA KOMUNIKACIE
-            # ukon komunikacie RST
-            if sw3_zacala_komunikacia == 1 and sw4 == 0 and sw7_ukoncena_komunikacia == 0:# RST
-                if bin_flag[-3] == "1":
-                    sw7_ukoncena_komunikacia = 1
-                    print("komunikacia uspesne ukoncena")
-                    break
-
-            # ukoncenie komuniakcie - pripad FIN-ACK-FIN-ACK
-            if sw3_zacala_komunikacia == 1 and sw4 == 0 and sw7_ukoncena_komunikacia == 0:# FIN
-                if bin_flag[-1] == "1":
-                    sw4 = 1
-                    continue
-
-            if sw4 == 1 and sw5 == 0 and sw7_ukoncena_komunikacia == 0:# ACK
-                if bin_flag[-5] == "1":
-                    sw5 = 1
-                    continue
-
-            if sw5 == 1 and sw6 == 0 and sw7_ukoncena_komunikacia == 0:# FIN
-                if bin_flag[-1] == "1":
-                    sw6 = 1
-                    continue
-
-            if sw6 == 1 and sw7_ukoncena_komunikacia == 0:# ACK
-                if bin_flag[-5] == "1":
-                    sw7_ukoncena_komunikacia = 1
-                    print("komunikacia uspesne ukoncena")
-                    break
-
-            # RST ukoncena komunikacia pripad FIN-ACK-RST
-            if sw5 == 1 and sw6 == 0 and sw7_ukoncena_komunikacia == 0:
-                if bin_flag[-3] == "1":
-                    sw7_ukoncena_komunikacia = 1
-                    print("komunikacia uspesne ukoncena")
-                    break
-
+            if end == "complete":
+                print("komunikacia uspesne ukoncena")
 
 
 if __name__ == "__main__":
