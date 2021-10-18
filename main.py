@@ -229,6 +229,7 @@ def write_MAC_adress(hex_packet, x):   # x znazornuje bit odkial zacne adresa ci
 
 
 def write_entire_packet(hex_packet, dlzka_ramca):
+    dlzka_ramca = dlzka_ramca
     for i in range(dlzka_ramca):  # Iterujem cez kazdy dajt
         str1 = hex_packet[i * 2]
         str2 = hex_packet[i * 2 + 1]
@@ -242,6 +243,41 @@ def write_entire_packet(hex_packet, dlzka_ramca):
         else:  # Pre vsetky ine
             FILE_VYPIS.write(chr(str1) + chr(str2) + " ")
 
+def write_frame(packets):
+
+
+
+    for frame in packets:
+        index_frame = frame[0]
+        packet = frame[1]
+        print(index_frame, end=" ")
+        # Vypis ramca (Poradové číslo rámca v analyzovanom súbore)
+        FILE_VYPIS.write("ramec " + str(index_frame) + "\n")
+        hex_packet = bytes_hex(packet)
+
+        # Vypis dlzonk (Dĺžku rámca v bajtoch poskytnutú pcap API a dĺžku tohto rámca prenášaného po médiu)
+        dlzka_ramca = len(packet)
+        FILE_VYPIS.write("dlzka ramca poskytnuta pcap API - " + str(dlzka_ramca) + "B\n")
+        FILE_VYPIS.write("dlzka ramca prenasaneho po mediu - " + str(max(64, dlzka_ramca + 4)) + "B\n")
+
+        # Vypis typu ramca (– Ethernet II, IEEE 802.3 (IEEE 802.3 s LLC, IEEE 802.3 s LLC a SNAP, IEEE 802.3 - Raw)
+        vnoreny_protokol = write_type_of_frame(hex_packet)
+
+        # Vypis adres (Zdrojovú a cieľovú fyzickú (MAC) adresu uzlov, medzi ktorými je rámec prenášaný)
+        write_MAC_adress(hex_packet, 12)  # od 12. bit =  zdrojova MAC adresa
+        write_MAC_adress(hex_packet, 0)  # od 0. bit =  cielova MAC adresa
+
+        # Vypis vnoreneho protokola
+        FILE_VYPIS.write(vnoreny_protokol + "\n")
+
+        # Vypis cielovej a zdrojovej IP adrese
+        if vnoreny_protokol == "IPv4":
+            FILE_VYPIS.write("zdrojova IP adresa: " + transforme_to_IP_adress(hex_packet[52:60]) + "\n")
+            FILE_VYPIS.write("cielova IP adresa: " + transforme_to_IP_adress(hex_packet[60:68]) + "\n")
+            write_IPv4_type_port(hex_packet, index_frame)  # Vypis IPv4 protokola
+
+        # Vypis celeho ramca
+        write_entire_packet(hex_packet, dlzka_ramca)
 
 def analyze_files(files):
     global source_IPv4_addresses
@@ -320,7 +356,6 @@ def find_start_communication(communication):
 
         if sw2 == 1 and sw3_zacala_komunikacia == 0: # ACK
             if bin_flag[-5] == "1":
-                print("Komunikacia zacala uspesne")
                 sw3_zacala_komunikacia = 1
         kolky_ramec += 1
 
@@ -334,12 +369,13 @@ def find_end_communication(communication, ramec_pokracovat):
     sw7_ukoncena_komunikacia = 0
     for ramec in HTTP_communications[communication][ramec_pokracovat:]:
         bin_flag = bin(int(ramec[1][92:96].decode(), 16))
-        # UKONCENIA KOMUNIKACIE
-        # ukon komunikacie RST
+
+        # ukoncenie komunikacie RST
         if sw4 == 0 and sw7_ukoncena_komunikacia == 0:  # RST
             if bin_flag[-3] == "1":
                 sw7_ukoncena_komunikacia = 1
                 return "complete"
+
 
         # ukoncenie komuniakcie - pripad FIN-ACK-FIN-ACK
         if sw4 == 0 and sw7_ukoncena_komunikacia == 0:  # FIN
@@ -362,6 +398,7 @@ def find_end_communication(communication, ramec_pokracovat):
                 sw7_ukoncena_komunikacia = 1
                 return "complete"
 
+
         # RST ukoncena komunikacia pripad FIN-ACK-RST
         if sw5 == 1 and sw6 == 0 and sw7_ukoncena_komunikacia == 0:
             if bin_flag[-3] == "1":
@@ -371,18 +408,31 @@ def find_end_communication(communication, ramec_pokracovat):
     return "incomplete"
 
 
-def write_communication():
+def write_complete_and_incomplete_communication():
     global HTTP_communications
+    uspesna_http_vypisana = 0
     for communication in HTTP_communications:
-        print("\nHTTP komunikacia")
 
         start = find_start_communication(communication)
         if start[0] == "complete":
             ramec_pokracovat = start[1]
             end = find_end_communication(communication, ramec_pokracovat)
-
             if end == "complete":
-                print("komunikacia uspesne ukoncena")
+                if uspesna_http_vypisana == 0:
+                    FILE_VYPIS.write("\nUspesna HTTP komunikacia\n")
+
+
+                    write_frame(HTTP_communications[communication])
+                    #print("da")
+                    uspesna_http_vypisana = 1
+
+            if end == "incomplete":
+                #print("Neuspesna HTTP komunikacia")
+                for frame in HTTP_communications[communication]:
+                    print("incomplete")
+                    #print(frame[1])
+                break
+
 
 
 if __name__ == "__main__":
@@ -390,7 +440,7 @@ if __name__ == "__main__":
     protocol_initialization()
     files = read_files()
     analyze_files(files)
-    write_communication()
+    write_complete_and_incomplete_communication()
 
 
 
