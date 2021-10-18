@@ -294,16 +294,27 @@ def analyze_files(files):
     FILE_VYPIS.write("\nIPv4 adresa uzla, ktora odoslala najvacsi pocet paketov: " + str(most_often_IPv4adress) + " - " + str(source_IPv4_addresses[most_often_IPv4adress]) + " uzlov")
 
 
+def write_communication():
+
+    for communication in HTTP_communications:
+        print("\nHTTP komunikacia")
+        for ramec in HTTP_communications[communication]:
+            #print("ramec-> " + str(ramec[0]) + " obsah-> " + str(ramec[1]))
+            print("ramec " + str(ramec[0]), end="")             # SYN ACK RST FIN
+            bin_flag = bin(int(ramec[1][92:96].decode(), 16))   # PRIKLAD: bin_flag[-2] -> predposledne pismeno musi byt 1 abo bolo SYN
+            print("  SYN = " + bin_flag[-2] + " ACK = "+ bin_flag[-5] + " RST = " + bin_flag[-3] + " FIN = " + bin_flag[-1])
+
+
+
+
 if __name__ == "__main__":
     FILE_VYPIS = open(r"vypis.txt", "w")
     protocol_initialization()
     files = read_files()
     analyze_files(files)
+    write_communication()
 
-    #for communication in HTTP_communications:
-     #   print("HTTP komunikacia")
-      #  for ramec in HTTP_communications[communication]:
-       #     print("ramec-> " + str(ramec[0]) + " obsah-> " + str(ramec[1]))
+
 
 
 
