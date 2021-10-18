@@ -244,19 +244,22 @@ def write_entire_packet(hex_packet, dlzka_ramca):
             FILE_VYPIS.write(chr(str1) + chr(str2) + " ")
 
 def write_frame(packets):
-
-
+    x = 0
 
     for frame in packets:
+        x += 1
+        if x > 10:
+            break
         index_frame = frame[0]
         packet = frame[1]
         print(index_frame, end=" ")
+        print(packet)
         # Vypis ramca (Poradové číslo rámca v analyzovanom súbore)
         FILE_VYPIS.write("ramec " + str(index_frame) + "\n")
-        hex_packet = bytes_hex(packet)
+        hex_packet = packet
 
         # Vypis dlzonk (Dĺžku rámca v bajtoch poskytnutú pcap API a dĺžku tohto rámca prenášaného po médiu)
-        dlzka_ramca = len(packet)
+        dlzka_ramca = int(len(packet)/2)
         FILE_VYPIS.write("dlzka ramca poskytnuta pcap API - " + str(dlzka_ramca) + "B\n")
         FILE_VYPIS.write("dlzka ramca prenasaneho po mediu - " + str(max(64, dlzka_ramca + 4)) + "B\n")
 
@@ -292,7 +295,6 @@ def analyze_files(files):
             # Vypis ramca (Poradové číslo rámca v analyzovanom súbore)
             FILE_VYPIS.write("ramec " + str(index_frame) + "\n")
             hex_packet = bytes_hex(packet)
-
             # Vypis dlzonk (Dĺžku rámca v bajtoch poskytnutú pcap API a dĺžku tohto rámca prenášaného po médiu)
             dlzka_ramca = len(packet)
             FILE_VYPIS.write("dlzka ramca poskytnuta pcap API - " + str(dlzka_ramca) + "B\n")
@@ -420,8 +422,6 @@ def write_complete_and_incomplete_communication():
             if end == "complete":
                 if uspesna_http_vypisana == 0:
                     FILE_VYPIS.write("\nUspesna HTTP komunikacia\n")
-
-
                     write_frame(HTTP_communications[communication])
                     #print("da")
                     uspesna_http_vypisana = 1
