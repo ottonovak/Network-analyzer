@@ -60,40 +60,30 @@ def protocol_initialization():
     FILE_PROTOKOLY.close()
 
 
-# TODO modify
-def pridaj_http_komunikaciu(key, value):
+def add_http_communication(index_frame, hex_packet):
     global HTTP_communications
-
-    if len(HTTP_communications[key]) >= 20:
-        for i in range(10, 19):
-            HTTP_communications[key][i] = HTTP_communications[key][i + 1]
-        HTTP_communications[key][19] = value
-    else:
-        HTTP_communications[key].append(value)
-
-
-def http_komunikacia(src_port, dst_port, index_frame, hex_packet):
-    global HTTP_communications
-    # Unikatne pre kazdu komunikaciu: {srcIP, dstIP, srcPort, dstPort} : {cislo, ramec} = {dstIP, srcIP, dstPort, srcPort}
-
     src_ip = transforme_to_IP_adress(hex_packet[52:60])
     dst_ip = transforme_to_IP_adress(hex_packet[60:68])
 
-    if not HTTP_communications.__contains__(
-            f"{src_ip}-{dst_ip}-{src_port}-{dst_port}") and not HTTP_communications.__contains__(
-            f"{dst_ip}-{src_ip}-{dst_port}-{src_port}"):
-        HTTP_communications[f"{src_ip}-{dst_ip}-{src_port}-{dst_port}"] = list()
-        pridaj_http_komunikaciu(f"{src_ip}-{dst_ip}-{src_port}-{dst_port}", [index_frame, hex_packet])
-    elif HTTP_communications.__contains__(f"{src_ip}-{dst_ip}-{src_port}-{dst_port}"):
-        pridaj_http_komunikaciu(f"{src_ip}-{dst_ip}-{src_port}-{dst_port}", [index_frame, hex_packet])
-    elif HTTP_communications.__contains__(f"{dst_ip}-{src_ip}-{dst_port}-{src_port}"):
-        pridaj_http_komunikaciu(f"{dst_ip}-{src_ip}-{dst_port}-{src_port}", [index_frame, hex_packet])
+    src_port = int(hex_packet[68:72], 16)
+    dst_port = int(hex_packet[72:76], 16)
 
+    # kluc pre kazdu komunikaciu vytvoreny z str(src_ip) + str(dst_ip) + str(src_port) + str(dst_port)
+    src_key = str(src_ip) + str(dst_ip) + str(src_port) + str(dst_port)
+    dst_key = str(dst_ip) + str(src_ip)+ str(dst_port) + str(src_port)
+
+    if not HTTP_communications.__contains__(src_key) and not HTTP_communications.__contains__(dst_key):
+        HTTP_communications[src_key] = list()
+        HTTP_communications[src_key].append([index_frame, hex_packet])
+
+    elif HTTP_communications.__contains__(src_key):
+        HTTP_communications[src_key].append([index_frame, hex_packet])
+
+    elif HTTP_communications.__contains__(dst_key):
+        HTTP_communications[dst_key].append([index_frame, hex_packet])
 
     #for communication in HTTP_communications:
     #    print("ramec " + str(index_frame) + " -> komunikacia " + str(communication))
-
-# TODO finish modifiy a pridaj dalsiu funkciu
 
 
 def transforme_to_IP_adress(hex_adres):
@@ -115,7 +105,7 @@ def write_TCP_type_port(hex_packet, index_frame):
         FILE_VYPIS.write("cielovy port: " + str(dst_port) + "\n")
 
         if TCPports[src_port] == "HTTP":
-            http_komunikacia(src_port, dst_port, index_frame, hex_packet)
+            add_http_communication(index_frame, hex_packet)
 
     elif TCPports.__contains__(dst_port):
         FILE_VYPIS.write(TCPports[dst_port] + "\n")
@@ -123,7 +113,7 @@ def write_TCP_type_port(hex_packet, index_frame):
         FILE_VYPIS.write("cielovy port: " + str(dst_port) + "\n")
 
         if TCPports[dst_port] == "HTTP":
-            http_komunikacia(src_port, dst_port, index_frame, hex_packet)
+            add_http_communication(index_frame, hex_packet)
 
     else:
         FILE_VYPIS.write("Taky TCP ne je uvedeny, SRC port: "+ str(src_port) + " DST port: " + str(dst_port) + "\n")
@@ -310,11 +300,10 @@ if __name__ == "__main__":
     files = read_files()
     analyze_files(files)
 
-    #(f"{src_ip}-{dst_ip}-{src_port}-{dst_port}", [index_frame, hex_packet])
-    for communication in HTTP_communications:
-        print("HTTP komunikacia")
-        for ramec in HTTP_communications[communication]:
-            print("ramce " + str(ramec[0]) + " IP: " + str(communication))
+    #for communication in HTTP_communications:
+     #   print("HTTP komunikacia")
+      #  for ramec in HTTP_communications[communication]:
+       #     print("ramec-> " + str(ramec[0]) + " obsah-> " + str(ramec[1]))
 
 
 
