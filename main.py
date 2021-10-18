@@ -63,6 +63,7 @@ def protocol_initialization():
 # TODO modify
 def pridaj_http_komunikaciu(key, value):
     global HTTP_communications
+
     if len(HTTP_communications[key]) >= 20:
         for i in range(10, 19):
             HTTP_communications[key][i] = HTTP_communications[key][i + 1]
@@ -70,31 +71,27 @@ def pridaj_http_komunikaciu(key, value):
     else:
         HTTP_communications[key].append(value)
 
-#    for communication in HTTP_communications:
-#        print("HTTP komunikacie")
-#        for ramec in HTTP_communications[communication]:
-#            print("ramce: " + str(ramec[0]))
 
-
-def http_komunikacia(ip_src, ip_dst, tcp_port_src, tcp_port_dst, index_frame, hex_ramec):
+def http_komunikacia(src_port, dst_port, index_frame, hex_packet):
     global HTTP_communications
     # Unikatne pre kazdu komunikaciu: {srcIP, dstIP, srcPort, dstPort} : {cislo, ramec} = {dstIP, srcIP, dstPort, srcPort}
 
+    src_ip = transforme_to_IP_adress(hex_packet[52:60])
+    dst_ip = transforme_to_IP_adress(hex_packet[60:68])
+
     if not HTTP_communications.__contains__(
-            f"{ip_src}-{ip_dst}-{tcp_port_src}-{tcp_port_dst}") and not HTTP_communications.__contains__(
-            f"{ip_dst}-{ip_src}-{tcp_port_dst}-{tcp_port_src}"):
-        HTTP_communications[f"{ip_src}-{ip_dst}-{tcp_port_src}-{tcp_port_dst}"] = list()
-        pridaj_http_komunikaciu(f"{ip_src}-{ip_dst}-{tcp_port_src}-{tcp_port_dst}", [index_frame, hex_ramec])
-    elif HTTP_communications.__contains__(f"{ip_src}-{ip_dst}-{tcp_port_src}-{tcp_port_dst}"):
-        pridaj_http_komunikaciu(f"{ip_src}-{ip_dst}-{tcp_port_src}-{tcp_port_dst}", [index_frame, hex_ramec])
-    elif HTTP_communications.__contains__(f"{ip_dst}-{ip_src}-{tcp_port_dst}-{tcp_port_src}"):
-        pridaj_http_komunikaciu(f"{ip_dst}-{ip_src}-{tcp_port_dst}-{tcp_port_src}", [index_frame, hex_ramec])
-
-
+            f"{src_ip}-{dst_ip}-{src_port}-{dst_port}") and not HTTP_communications.__contains__(
+            f"{dst_ip}-{src_ip}-{dst_port}-{src_port}"):
+        HTTP_communications[f"{src_ip}-{dst_ip}-{src_port}-{dst_port}"] = list()
+        pridaj_http_komunikaciu(f"{src_ip}-{dst_ip}-{src_port}-{dst_port}", [index_frame, hex_packet])
+    elif HTTP_communications.__contains__(f"{src_ip}-{dst_ip}-{src_port}-{dst_port}"):
+        pridaj_http_komunikaciu(f"{src_ip}-{dst_ip}-{src_port}-{dst_port}", [index_frame, hex_packet])
+    elif HTTP_communications.__contains__(f"{dst_ip}-{src_ip}-{dst_port}-{src_port}"):
+        pridaj_http_komunikaciu(f"{dst_ip}-{src_ip}-{dst_port}-{src_port}", [index_frame, hex_packet])
 
 
     #for communication in HTTP_communications:
-        #print("ramec " + str(index_frame) + " -> komunikacia " + str(communication))
+    #    print("ramec " + str(index_frame) + " -> komunikacia " + str(communication))
 
 # TODO finish modifiy a pridaj dalsiu funkciu
 
@@ -111,8 +108,6 @@ def transforme_to_IP_adress(hex_adres):
 def write_TCP_type_port(hex_packet, index_frame):
     src_port = int(hex_packet[68:72], 16)
     dst_port = int(hex_packet[72:76], 16)
-    src_ip = transforme_to_IP_adress(hex_packet[52:60])
-    dst_ip = transforme_to_IP_adress(hex_packet[60:68])
 
     if TCPports.__contains__(src_port):  # Preverii ak taky port bol vobec uvedeni databaze
         FILE_VYPIS.write(TCPports[src_port] + "\n")
@@ -120,8 +115,7 @@ def write_TCP_type_port(hex_packet, index_frame):
         FILE_VYPIS.write("cielovy port: " + str(dst_port) + "\n")
 
         if TCPports[src_port] == "HTTP":
-            print(str(index_frame) + " : " + str(src_port) + " " + str(dst_port))
-            http_komunikacia(src_ip, dst_ip, src_port, dst_port, index_frame, hex_packet)
+            http_komunikacia(src_port, dst_port, index_frame, hex_packet)
 
     elif TCPports.__contains__(dst_port):
         FILE_VYPIS.write(TCPports[dst_port] + "\n")
@@ -129,12 +123,10 @@ def write_TCP_type_port(hex_packet, index_frame):
         FILE_VYPIS.write("cielovy port: " + str(dst_port) + "\n")
 
         if TCPports[dst_port] == "HTTP":
-            print(str(index_frame) +" : "+ str(src_port) + " " +str(dst_port))
-            http_komunikacia(src_ip, dst_ip, src_port, dst_port, index_frame, hex_packet)
-
+            http_komunikacia(src_port, dst_port, index_frame, hex_packet)
 
     else:
-        FILE_VYPIS.write("Taky TCP nei je uvedeny, port: "+ str(int(hex_packet[68:72], 16)) + "\n")
+        FILE_VYPIS.write("Taky TCP ne je uvedeny, SRC port: "+ str(src_port) + " DST port: " + str(dst_port) + "\n")
 
 
 def write_UDP_type_port(hex_packet):
@@ -317,5 +309,13 @@ if __name__ == "__main__":
     protocol_initialization()
     files = read_files()
     analyze_files(files)
+
+    #(f"{src_ip}-{dst_ip}-{src_port}-{dst_port}", [index_frame, hex_packet])
+    for communication in HTTP_communications:
+        print("HTTP komunikacia")
+        for ramec in HTTP_communications[communication]:
+            print("ramce " + str(ramec[0]) + " IP: " + str(communication))
+
+
 
     FILE_VYPIS.close()
