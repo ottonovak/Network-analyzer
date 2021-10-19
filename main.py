@@ -18,6 +18,7 @@ TELNET_communications = {}
 SSH_communications = {}
 FTP_riadiace_communications = {}
 FTP_datove_communications = {}
+DNS_communications = {}
 
 
 def protocol_initialization():
@@ -60,8 +61,8 @@ def protocol_initialization():
     FILE_PROTOKOLY.close()
 
 
-def add_http_communication(index_frame, hex_packet):
-    global HTTP_communications
+def add_communication(communications, index_frame, hex_packet):
+
     src_ip = transforme_to_IP_adress(hex_packet[52:60])
     dst_ip = transforme_to_IP_adress(hex_packet[60:68])
 
@@ -72,18 +73,18 @@ def add_http_communication(index_frame, hex_packet):
     src_key = str(src_ip) + str(dst_ip) + str(src_port) + str(dst_port)
     dst_key = str(dst_ip) + str(src_ip)+ str(dst_port) + str(src_port)
 
-    if not HTTP_communications.__contains__(src_key) and not HTTP_communications.__contains__(dst_key):
-        HTTP_communications[src_key] = list()
-        HTTP_communications[src_key].append([index_frame, hex_packet])
+    if not communications.__contains__(src_key) and not communications.__contains__(dst_key):
+        communications[src_key] = list()
+        communications[src_key].append([index_frame, hex_packet])
 
-    elif HTTP_communications.__contains__(src_key):
-        HTTP_communications[src_key].append([index_frame, hex_packet])
+    elif communications.__contains__(src_key):
+        communications[src_key].append([index_frame, hex_packet])
 
-    elif HTTP_communications.__contains__(dst_key):
-        HTTP_communications[dst_key].append([index_frame, hex_packet])
+    elif communications.__contains__(dst_key):
+        communications[dst_key].append([index_frame, hex_packet])
 
-    #for communication in HTTP_communications:
-    #    print("ramec " + str(index_frame) + " -> komunikacia " + str(communication))
+    #for communication in communications:
+        #print("ramec " + str(index_frame) + " -> komunikacia " + str(communication))
 
 
 def transforme_to_IP_adress(hex_adres):
@@ -105,15 +106,39 @@ def write_TCP_type_port(hex_packet, index_frame):
         FILE_VYPIS.write("cielovy port: " + str(dst_port) + "\n")
 
         if TCPports[src_port] == "HTTP":
-            add_http_communication(index_frame, hex_packet)
+            add_communication(HTTP_communications, index_frame, hex_packet)
+        elif TCPports[src_port] == "HTTPS":
+            add_communication(HTTPS_communications, index_frame, hex_packet)
+        elif TCPports[src_port] == "DNS":
+            add_communication(DNS_communications, index_frame, hex_packet)
+        elif TCPports[src_port] == "TELNET":
+            add_communication(TELNET_communications, index_frame, hex_packet)
+        elif TCPports[src_port] == "SSH":
+            add_communication(SSH_communications, index_frame, hex_packet)
+        elif TCPports[src_port] == "FTP riadiace":
+            add_communication(FTP_riadiace_communications, index_frame, hex_packet)
+        elif TCPports[src_port] == "FTP datove":
+            add_communication(FTP_datove_communications, index_frame, hex_packet)
 
-    elif TCPports.__contains__(dst_port):
+    elif TCPports.__contains__(dst_port): # pripad ak je cielova adresa neajky TCP
         FILE_VYPIS.write(TCPports[dst_port] + "\n")
         FILE_VYPIS.write("zdrojovy port: " + str(src_port) + "\n")
         FILE_VYPIS.write("cielovy port: " + str(dst_port) + "\n")
 
         if TCPports[dst_port] == "HTTP":
-            add_http_communication(index_frame, hex_packet)
+            add_communication(HTTP_communications, index_frame, hex_packet)
+        elif TCPports[dst_port] == "HTTPS":
+            add_communication(HTTPS_communications, index_frame, hex_packet)
+        elif TCPports[dst_port] == "DNS":
+            add_communication(DNS_communications, index_frame, hex_packet)
+        elif TCPports[dst_port] == "TELNET":
+            add_communication(TELNET_communications, index_frame, hex_packet)
+        elif TCPports[dst_port] == "SSH":
+            add_communication(SSH_communications, index_frame, hex_packet)
+        elif TCPports[dst_port] == "FTP riadiace":
+            add_communication(FTP_riadiace_communications, index_frame, hex_packet)
+        elif TCPports[dst_port] == "FTP datove":
+            add_communication(FTP_datove_communications, index_frame, hex_packet)
 
     else:
         FILE_VYPIS.write("Taky TCP ne je uvedeny, SRC port: "+ str(src_port) + " DST port: " + str(dst_port) + "\n")
@@ -141,7 +166,6 @@ def add_source_IPv4_adress_to_list(hex_packet):
         source_IPv4_addresses[adress_str] = 1        # Ked adresa sa vyskitne prvykrat
 
 
-
 def find_ether_type(hex_packet):
     # Hlada v slovniku nazov protokolu (ktore cerpal z databaze/textaku "protokoly.txt")
     str1 = hex_packet[24:28]
@@ -152,7 +176,7 @@ def find_ether_type(hex_packet):
             add_source_IPv4_adress_to_list(hex_packet)
         return ETHER_types[index_dictionary]
     else:
-        return "Tento Ethertype nie je uvedeny v databaze"
+        return "Tento EtherType nie je uvedeny v databaze"
 
 
 def find_lsap_type(hex_packet):
@@ -180,7 +204,7 @@ def write_IPv4_type_port(hex_packet, index_frame):
         if IPprotocols[index_dictionary] == "UDP":
             write_UDP_type_port(hex_packet)
     else:
-        FILE_VYPIS.write("Tento IP protokol nie je uvedeny v databaze\n")
+        FILE_VYPIS.write("Tento typ IP protokolu nie je uvedeny v databaze\n")
 
 
 def read_files():
@@ -229,7 +253,6 @@ def write_MAC_adress(hex_packet, x):   # x znazornuje bit odkial zacne adresa ci
 
 
 def write_entire_packet(hex_packet, dlzka_ramca):
-    dlzka_ramca = dlzka_ramca
     for i in range(dlzka_ramca):  # Iterujem cez kazdy dajt
         str1 = hex_packet[i * 2]
         str2 = hex_packet[i * 2 + 1]
@@ -243,10 +266,11 @@ def write_entire_packet(hex_packet, dlzka_ramca):
         else:  # Pre vsetky ine
             FILE_VYPIS.write(chr(str1) + chr(str2) + " ")
 
+
 def write_frame(packets):
     x = 0
 
-    # ak su viac nez 19 vypise prve 10 a posledne 10
+    # ak su viac nez 19, vypise prve 10 a posledne 10
     if len(packets) > 19:
         x = 0
         for frame in packets:
@@ -416,16 +440,17 @@ def analyze_files(files):
     most_often_IPv4adress = max(source_IPv4_addresses, key=source_IPv4_addresses.get)
     FILE_VYPIS.write("\nIPv4 adresa uzla, ktora odoslala najvacsi pocet paketov: " + str(most_often_IPv4adress) + " - " + str(source_IPv4_addresses[most_often_IPv4adress]) + " uzlov")
 
-def find_start_communication(communication):
+
+def find_start_communication(commun, communications):
     # Kontrola 3 way handshake
     kolky_ramec = 0
     sw1 = 0
     sw2 = 0
     sw3_zacala_komunikacia = 0
 
-    for ramec in HTTP_communications[communication]:
+    for ramec in communications[commun]:
         bin_flag = bin(int(ramec[1][92:96].decode(), 16))
-        # print("  SYN = " + bin_flag[-2] + " ACK = "+ bin_flag[-5] + " RST = " + bin_flag[-3] + " FIN = " + bin_flag[-1])
+        #print("  SYN = " + bin_flag[-2] + " ACK = "+ bin_flag[-5] + " RST = " + bin_flag[-3] + " FIN = " + bin_flag[-1])
 
         # Ked sa uz naslo
         if sw3_zacala_komunikacia == 1:
@@ -446,19 +471,20 @@ def find_start_communication(communication):
                 sw3_zacala_komunikacia = 1
         kolky_ramec += 1
 
-    return ["incomplete", kolky_ramec]
+    return ["incomplete", kolky_ramec - 1]
 
 
-def find_end_communication(communication, ramec_pokracovat):
+def find_end_communication(commun, ramec_pokracovat, communications):
     sw4 = 0
     sw5 = 0
     sw6 = 0
     sw7_ukoncena_komunikacia = 0
-    for ramec in HTTP_communications[communication][ramec_pokracovat:]:
+
+    for ramec in communications[commun][ramec_pokracovat:]:
         bin_flag = bin(int(ramec[1][92:96].decode(), 16))
 
         # ukoncenie komunikacie RST
-        if sw4 == 0 and sw7_ukoncena_komunikacia == 0:  # RST
+        if sw7_ukoncena_komunikacia == 0:  # RST
             if bin_flag[-3] == "1":
                 sw7_ukoncena_komunikacia = 1
                 return "complete"
@@ -470,12 +496,12 @@ def find_end_communication(communication, ramec_pokracovat):
                 sw4 = 1
                 continue
 
-        if sw4 == 1 and sw7_ukoncena_komunikacia == 0:  # ACK
+        if sw4 == 1 and sw5 == 0 and sw7_ukoncena_komunikacia == 0:  # ACK
             if bin_flag[-5] == "1":
                 sw5 = 1
                 continue
 
-        if sw5 == 1and sw7_ukoncena_komunikacia == 0:  # FIN
+        if sw5 == 1 and sw7_ukoncena_komunikacia == 0:  # FIN
             if bin_flag[-1] == "1":
                 sw6 = 1
                 continue
@@ -487,7 +513,7 @@ def find_end_communication(communication, ramec_pokracovat):
 
 
         # RST ukoncena komunikacia pripad FIN-ACK-RST
-        if sw5 == 1 and sw6 == 0 and sw7_ukoncena_komunikacia == 0:
+        if sw5 == 1 and sw7_ukoncena_komunikacia == 0:
             if bin_flag[-3] == "1":
                 sw7_ukoncena_komunikacia = 1
                 return "complete"
@@ -495,27 +521,31 @@ def find_end_communication(communication, ramec_pokracovat):
     return "incomplete"
 
 
-def write_complete_and_incomplete_communication():
-    global HTTP_communications
-    uspesna_http_vypisana = 0
-    neuspesna_http_vypisana = 0
-    for communication in HTTP_communications:
+def write_complete_and_incomplete_TCP_communication(communications, protocol_type):
 
-        start = find_start_communication(communication)
+    uspesna_vypisana_kompletna = 0
+    uspesna_vypisana_nekompletna = 0
+
+
+    for commun in communications:
+        start = find_start_communication(commun, communications)
         if start[0] == "complete":
+            print("3wh")
             ramec_pokracovat = start[1]
-            end = find_end_communication(communication, ramec_pokracovat)
+            end = find_end_communication(commun, ramec_pokracovat,communications)
             if end == "complete":
-                if uspesna_http_vypisana == 0:
-                    FILE_VYPIS.write("\nUspesna HTTP komunikacia\n")
-                    write_frame(HTTP_communications[communication])
-                    uspesna_http_vypisana = 1
+                print("COMPLETE")
+                if uspesna_vypisana_kompletna == 0:
+                    FILE_VYPIS.write("\nuspesna " + protocol_type + " komunikacia----------------------------------\n")
+                    write_frame(communications[commun])
+                    uspesna_vypisana_kompletna = 1
 
             elif end == "incomplete":
-                #print("Neuspesna HTTP komunikacia")
-                FILE_VYPIS.write("\nNEuspesna HTTP komunikacia----------------------------------\n")
-                write_frame(HTTP_communications[communication])
-                break
+                print("NOT C")
+                if uspesna_vypisana_nekompletna == 0:
+                    FILE_VYPIS.write("\nNEuspesna " + protocol_type + " komunikacia--------------------------------\n")
+                    write_frame(communications[commun])
+                    uspesna_vypisana_nekompletna = 1
 
 
 
@@ -527,11 +557,17 @@ if __name__ == "__main__":
     FILE_VYPIS.close()
 
     FILE_VYPIS = open(r"vypis_komunikacia.txt", "w")
-    write_complete_and_incomplete_communication()
+    print("HTTP")
+    write_complete_and_incomplete_TCP_communication(HTTP_communications, "HTTP")
+    print("HTTPS")
+    write_complete_and_incomplete_TCP_communication(HTTPS_communications, "HTTPS")
+    print("TELNET")
+    write_complete_and_incomplete_TCP_communication(TELNET_communications, "TELNET")
+    print("SSH")
+    write_complete_and_incomplete_TCP_communication(SSH_communications, "SSH")
+    print("FTP riadiace")
+    write_complete_and_incomplete_TCP_communication(FTP_riadiace_communications, "FTP riadiace")
+    print("FTP datove")
+    write_complete_and_incomplete_TCP_communication(FTP_datove_communications, "FTP datove")
+
     FILE_VYPIS.close()
-
-
-
-
-
-
