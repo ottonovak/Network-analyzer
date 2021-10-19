@@ -246,41 +246,126 @@ def write_entire_packet(hex_packet, dlzka_ramca):
 def write_frame(packets):
     x = 0
 
-    for frame in packets:
-        x += 1
-        if x > 10:
-            break
-        index_frame = frame[0]
-        packet = frame[1]
-        print(index_frame, end=" ")
-        print(packet)
-        # Vypis ramca (Poradové číslo rámca v analyzovanom súbore)
-        FILE_VYPIS.write("ramec " + str(index_frame) + "\n")
-        hex_packet = packet
+    # ak su viac nez 19 vypise prve 10 a posledne 10
+    if len(packets) > 19:
+        x = 0
+        for frame in packets:
+            x += 1
+            if x > 10:
+                break
 
-        # Vypis dlzonk (Dĺžku rámca v bajtoch poskytnutú pcap API a dĺžku tohto rámca prenášaného po médiu)
-        dlzka_ramca = int(len(packet)/2)
-        FILE_VYPIS.write("dlzka ramca poskytnuta pcap API - " + str(dlzka_ramca) + "B\n")
-        FILE_VYPIS.write("dlzka ramca prenasaneho po mediu - " + str(max(64, dlzka_ramca + 4)) + "B\n")
+            index_frame = frame[0]
+            packet = frame[1]
+            #print(index_frame, end=" ")
+            #print(packet)
+            # Vypis ramca (Poradové číslo rámca v analyzovanom súbore)
+            FILE_VYPIS.write("ramec " + str(index_frame) + "\n")
+            hex_packet = packet
 
-        # Vypis typu ramca (– Ethernet II, IEEE 802.3 (IEEE 802.3 s LLC, IEEE 802.3 s LLC a SNAP, IEEE 802.3 - Raw)
-        vnoreny_protokol = write_type_of_frame(hex_packet)
+            # Vypis dlzonk (Dĺžku rámca v bajtoch poskytnutú pcap API a dĺžku tohto rámca prenášaného po médiu)
+            dlzka_ramca = int(len(packet)/2)
+            FILE_VYPIS.write("dlzka ramca poskytnuta pcap API - " + str(dlzka_ramca) + "B\n")
+            FILE_VYPIS.write("dlzka ramca prenasaneho po mediu - " + str(max(64, dlzka_ramca + 4)) + "B\n")
 
-        # Vypis adres (Zdrojovú a cieľovú fyzickú (MAC) adresu uzlov, medzi ktorými je rámec prenášaný)
-        write_MAC_adress(hex_packet, 12)  # od 12. bit =  zdrojova MAC adresa
-        write_MAC_adress(hex_packet, 0)  # od 0. bit =  cielova MAC adresa
+            # Vypis typu ramca (– Ethernet II, IEEE 802.3 (IEEE 802.3 s LLC, IEEE 802.3 s LLC a SNAP, IEEE 802.3 - Raw)
+            vnoreny_protokol = write_type_of_frame(hex_packet)
 
-        # Vypis vnoreneho protokola
-        FILE_VYPIS.write(vnoreny_protokol + "\n")
+            # Vypis adres (Zdrojovú a cieľovú fyzickú (MAC) adresu uzlov, medzi ktorými je rámec prenášaný)
+            write_MAC_adress(hex_packet, 12)  # od 12. bit =  zdrojova MAC adresa
+            write_MAC_adress(hex_packet, 0)  # od 0. bit =  cielova MAC adresa
 
-        # Vypis cielovej a zdrojovej IP adrese
-        if vnoreny_protokol == "IPv4":
-            FILE_VYPIS.write("zdrojova IP adresa: " + transforme_to_IP_adress(hex_packet[52:60]) + "\n")
-            FILE_VYPIS.write("cielova IP adresa: " + transforme_to_IP_adress(hex_packet[60:68]) + "\n")
-            write_IPv4_type_port(hex_packet, index_frame)  # Vypis IPv4 protokola
+            # Vypis vnoreneho protokola
+            FILE_VYPIS.write(vnoreny_protokol + "\n")
 
-        # Vypis celeho ramca
-        write_entire_packet(hex_packet, dlzka_ramca)
+            # Vypis cielovej a zdrojovej IP adrese
+            if vnoreny_protokol == "IPv4":
+                FILE_VYPIS.write("zdrojova IP adresa: " + transforme_to_IP_adress(hex_packet[52:60]) + "\n")
+                FILE_VYPIS.write("cielova IP adresa: " + transforme_to_IP_adress(hex_packet[60:68]) + "\n")
+                write_IPv4_type_port(hex_packet, index_frame)  # Vypis IPv4 protokola
+
+            # Vypis celeho ramca
+            write_entire_packet(hex_packet, dlzka_ramca)
+
+         # poslende 10 ramce
+        x = 0
+
+        for frame in packets[len(packets)-20:]:
+            x += 1
+            if x > 10:
+                break
+            index_frame = frame[0]
+            packet = frame[1]
+            # print(index_frame, end=" ")
+            # print(packet)
+            # Vypis ramca (Poradové číslo rámca v analyzovanom súbore)
+            FILE_VYPIS.write("ramec " + str(index_frame) + "\n")
+            hex_packet = packet
+
+            # Vypis dlzonk (Dĺžku rámca v bajtoch poskytnutú pcap API a dĺžku tohto rámca prenášaného po médiu)
+            dlzka_ramca = int(len(packet) / 2)
+            FILE_VYPIS.write("dlzka ramca poskytnuta pcap API - " + str(dlzka_ramca) + "B\n")
+            FILE_VYPIS.write("dlzka ramca prenasaneho po mediu - " + str(max(64, dlzka_ramca + 4)) + "B\n")
+
+            # Vypis typu ramca (– Ethernet II, IEEE 802.3 (IEEE 802.3 s LLC, IEEE 802.3 s LLC a SNAP, IEEE 802.3 - Raw)
+            vnoreny_protokol = write_type_of_frame(hex_packet)
+
+            # Vypis adres (Zdrojovú a cieľovú fyzickú (MAC) adresu uzlov, medzi ktorými je rámec prenášaný)
+            write_MAC_adress(hex_packet, 12)  # od 12. bit =  zdrojova MAC adresa
+            write_MAC_adress(hex_packet, 0)  # od 0. bit =  cielova MAC adresa
+
+            # Vypis vnoreneho protokola
+            FILE_VYPIS.write(vnoreny_protokol + "\n")
+
+            # Vypis cielovej a zdrojovej IP adrese
+            if vnoreny_protokol == "IPv4":
+                FILE_VYPIS.write("zdrojova IP adresa: " + transforme_to_IP_adress(hex_packet[52:60]) + "\n")
+                FILE_VYPIS.write("cielova IP adresa: " + transforme_to_IP_adress(hex_packet[60:68]) + "\n")
+                write_IPv4_type_port(hex_packet, index_frame)  # Vypis IPv4 protokola
+
+            # Vypis celeho ramca
+            write_entire_packet(hex_packet, dlzka_ramca)
+
+    # ak su menej nez 20, vypise vsetky
+    if len(packets) < 20:
+
+        dlzka = len(packets)
+        for frame in packets:
+            x += 1
+            if x > dlzka:
+                break
+            index_frame = frame[0]
+            packet = frame[1]
+
+            # print(index_frame, end=" ")
+            # print(packet)
+            # Vypis ramca (Poradové číslo rámca v analyzovanom súbore)
+            FILE_VYPIS.write("ramec " + str(index_frame) + "\n")
+            hex_packet = packet
+
+            # Vypis dlzonk (Dĺžku rámca v bajtoch poskytnutú pcap API a dĺžku tohto rámca prenášaného po médiu)
+            dlzka_ramca = int(len(packet) / 2)
+            FILE_VYPIS.write("dlzka ramca poskytnuta pcap API - " + str(dlzka_ramca) + "B\n")
+            FILE_VYPIS.write("dlzka ramca prenasaneho po mediu - " + str(max(64, dlzka_ramca + 4)) + "B\n")
+
+            # Vypis typu ramca (– Ethernet II, IEEE 802.3 (IEEE 802.3 s LLC, IEEE 802.3 s LLC a SNAP, IEEE 802.3 - Raw)
+            vnoreny_protokol = write_type_of_frame(hex_packet)
+
+            # Vypis adres (Zdrojovú a cieľovú fyzickú (MAC) adresu uzlov, medzi ktorými je rámec prenášaný)
+            write_MAC_adress(hex_packet, 12)  # od 12. bit =  zdrojova MAC adresa
+            write_MAC_adress(hex_packet, 0)  # od 0. bit =  cielova MAC adresa
+
+            # Vypis vnoreneho protokola
+            FILE_VYPIS.write(vnoreny_protokol + "\n")
+
+            # Vypis cielovej a zdrojovej IP adrese
+            if vnoreny_protokol == "IPv4":
+                FILE_VYPIS.write("zdrojova IP adresa: " + transforme_to_IP_adress(hex_packet[52:60]) + "\n")
+                FILE_VYPIS.write("cielova IP adresa: " + transforme_to_IP_adress(hex_packet[60:68]) + "\n")
+                write_IPv4_type_port(hex_packet, index_frame)  # Vypis IPv4 protokola
+
+            # Vypis celeho ramca
+            write_entire_packet(hex_packet, dlzka_ramca)
+
 
 def analyze_files(files):
     global source_IPv4_addresses
@@ -413,6 +498,7 @@ def find_end_communication(communication, ramec_pokracovat):
 def write_complete_and_incomplete_communication():
     global HTTP_communications
     uspesna_http_vypisana = 0
+    neuspesna_http_vypisana = 0
     for communication in HTTP_communications:
 
         start = find_start_communication(communication)
@@ -423,14 +509,12 @@ def write_complete_and_incomplete_communication():
                 if uspesna_http_vypisana == 0:
                     FILE_VYPIS.write("\nUspesna HTTP komunikacia\n")
                     write_frame(HTTP_communications[communication])
-                    #print("da")
                     uspesna_http_vypisana = 1
 
-            if end == "incomplete":
+            elif end == "incomplete":
                 #print("Neuspesna HTTP komunikacia")
-                for frame in HTTP_communications[communication]:
-                    print("incomplete")
-                    #print(frame[1])
+                FILE_VYPIS.write("\nNEuspesna HTTP komunikacia----------------------------------\n")
+                write_frame(HTTP_communications[communication])
                 break
 
 
@@ -440,10 +524,14 @@ if __name__ == "__main__":
     protocol_initialization()
     files = read_files()
     analyze_files(files)
-    write_complete_and_incomplete_communication()
-
-
-
-
-
     FILE_VYPIS.close()
+
+    FILE_VYPIS = open(r"vypis_komunikacia.txt", "w")
+    write_complete_and_incomplete_communication()
+    FILE_VYPIS.close()
+
+
+
+
+
+
