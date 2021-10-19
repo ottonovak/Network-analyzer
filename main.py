@@ -6,6 +6,7 @@ from scapy.utils import rdpcap
 
 
 files = []
+ries_kom = 0
 ETHER_types = {}
 LSAP_types = {}
 IPprotocols = {}
@@ -97,6 +98,7 @@ def transforme_to_IP_adress(hex_adres):
 
 
 def write_TCP_type_port(hex_packet, index_frame):
+    global ries_kom
     src_port = int(hex_packet[68:72], 16)
     dst_port = int(hex_packet[72:76], 16)
 
@@ -105,40 +107,42 @@ def write_TCP_type_port(hex_packet, index_frame):
         FILE_VYPIS.write("zdrojovy port: " + str(src_port) + "\n")
         FILE_VYPIS.write("cielovy port: " + str(dst_port) + "\n")
 
-        if TCPports[src_port] == "HTTP":
-            add_communication(HTTP_communications, index_frame, hex_packet)
-        elif TCPports[src_port] == "HTTPS":
-            add_communication(HTTPS_communications, index_frame, hex_packet)
-        elif TCPports[src_port] == "DNS":
-            add_communication(DNS_communications, index_frame, hex_packet)
-        elif TCPports[src_port] == "TELNET":
-            add_communication(TELNET_communications, index_frame, hex_packet)
-        elif TCPports[src_port] == "SSH":
-            add_communication(SSH_communications, index_frame, hex_packet)
-        elif TCPports[src_port] == "FTP riadiace":
-            add_communication(FTP_riadiace_communications, index_frame, hex_packet)
-        elif TCPports[src_port] == "FTP datove":
-            add_communication(FTP_datove_communications, index_frame, hex_packet)
+        if ries_kom == 0:
+            if TCPports[src_port] == "HTTP":
+                add_communication(HTTP_communications, index_frame, hex_packet)
+            elif TCPports[src_port] == "HTTPS":
+                add_communication(HTTPS_communications, index_frame, hex_packet)
+            elif TCPports[src_port] == "DNS":
+                add_communication(DNS_communications, index_frame, hex_packet)
+            elif TCPports[src_port] == "TELNET":
+                add_communication(TELNET_communications, index_frame, hex_packet)
+            elif TCPports[src_port] == "SSH":
+                add_communication(SSH_communications, index_frame, hex_packet)
+            elif TCPports[src_port] == "FTP riadiace":
+                add_communication(FTP_riadiace_communications, index_frame, hex_packet)
+            elif TCPports[src_port] == "FTP datove":
+                add_communication(FTP_datove_communications, index_frame, hex_packet)
 
     elif TCPports.__contains__(dst_port): # pripad ak je cielova adresa neajky TCP
         FILE_VYPIS.write(TCPports[dst_port] + "\n")
         FILE_VYPIS.write("zdrojovy port: " + str(src_port) + "\n")
         FILE_VYPIS.write("cielovy port: " + str(dst_port) + "\n")
 
-        if TCPports[dst_port] == "HTTP":
-            add_communication(HTTP_communications, index_frame, hex_packet)
-        elif TCPports[dst_port] == "HTTPS":
-            add_communication(HTTPS_communications, index_frame, hex_packet)
-        elif TCPports[dst_port] == "DNS":
-            add_communication(DNS_communications, index_frame, hex_packet)
-        elif TCPports[dst_port] == "TELNET":
-            add_communication(TELNET_communications, index_frame, hex_packet)
-        elif TCPports[dst_port] == "SSH":
-            add_communication(SSH_communications, index_frame, hex_packet)
-        elif TCPports[dst_port] == "FTP riadiace":
-            add_communication(FTP_riadiace_communications, index_frame, hex_packet)
-        elif TCPports[dst_port] == "FTP datove":
-            add_communication(FTP_datove_communications, index_frame, hex_packet)
+        if ries_kom == 0:
+            if TCPports[dst_port] == "HTTP":
+                add_communication(HTTP_communications, index_frame, hex_packet)
+            elif TCPports[dst_port] == "HTTPS":
+                add_communication(HTTPS_communications, index_frame, hex_packet)
+            elif TCPports[dst_port] == "DNS":
+                add_communication(DNS_communications, index_frame, hex_packet)
+            elif TCPports[dst_port] == "TELNET":
+                add_communication(TELNET_communications, index_frame, hex_packet)
+            elif TCPports[dst_port] == "SSH":
+                add_communication(SSH_communications, index_frame, hex_packet)
+            elif TCPports[dst_port] == "FTP riadiace":
+                add_communication(FTP_riadiace_communications, index_frame, hex_packet)
+            elif TCPports[dst_port] == "FTP datove":
+                add_communication(FTP_datove_communications, index_frame, hex_packet)
 
     else:
         FILE_VYPIS.write("Taky TCP ne je uvedeny, SRC port: "+ str(src_port) + " DST port: " + str(dst_port) + "\n")
@@ -167,12 +171,13 @@ def add_source_IPv4_adress_to_list(hex_packet):
 
 
 def find_ether_type(hex_packet):
+    global ries_kom
     # Hlada v slovniku nazov protokolu (ktore cerpal z databaze/textaku "protokoly.txt")
     str1 = hex_packet[24:28]
     index_dictionary = int(str1.decode(), 16)
 
     if ETHER_types.__contains__(index_dictionary):  # Preverii ak taky protokol bol vobec uvedeni databaze
-        if ETHER_types[index_dictionary] == "IPv4":
+        if ETHER_types[index_dictionary] == "IPv4" and ries_kom == 0:
             add_source_IPv4_adress_to_list(hex_packet)
         return ETHER_types[index_dictionary]
     else:
@@ -267,6 +272,39 @@ def write_entire_packet(hex_packet, dlzka_ramca):
             FILE_VYPIS.write(chr(str1) + chr(str2) + " ")
 
 
+def write_frame_efectiv(frame):
+    index_frame = frame[0]
+    packet = frame[1]
+    # print(index_frame, end=" ")
+    # print(packet)
+    # Vypis ramca (Poradové číslo rámca v analyzovanom súbore)
+    FILE_VYPIS.write("ramec " + str(index_frame) + "\n")
+    hex_packet = packet
+
+    # Vypis dlzonk (Dĺžku rámca v bajtoch poskytnutú pcap API a dĺžku tohto rámca prenášaného po médiu)
+    dlzka_ramca = int(len(packet) / 2)
+    FILE_VYPIS.write("dlzka ramca poskytnuta pcap API - " + str(dlzka_ramca) + "B\n")
+    FILE_VYPIS.write("dlzka ramca prenasaneho po mediu - " + str(max(64, dlzka_ramca + 4)) + "B\n")
+
+    # Vypis typu ramca (– Ethernet II, IEEE 802.3 (IEEE 802.3 s LLC, IEEE 802.3 s LLC a SNAP, IEEE 802.3 - Raw)
+    vnoreny_protokol = write_type_of_frame(hex_packet)
+
+    # Vypis adres (Zdrojovú a cieľovú fyzickú (MAC) adresu uzlov, medzi ktorými je rámec prenášaný)
+    write_MAC_adress(hex_packet, 12)  # od 12. bit =  zdrojova MAC adresa
+    write_MAC_adress(hex_packet, 0)  # od 0. bit =  cielova MAC adresa
+
+    # Vypis vnoreneho protokola
+    FILE_VYPIS.write(vnoreny_protokol + "\n")
+
+    # Vypis cielovej a zdrojovej IP adrese
+    if vnoreny_protokol == "IPv4":
+        FILE_VYPIS.write("zdrojova IP adresa: " + transforme_to_IP_adress(hex_packet[52:60]) + "\n")
+        FILE_VYPIS.write("cielova IP adresa: " + transforme_to_IP_adress(hex_packet[60:68]) + "\n")
+        write_IPv4_type_port(hex_packet, index_frame)  # Vypis IPv4 protokolov
+
+    # Vypis celeho ramca
+    write_entire_packet(hex_packet, dlzka_ramca)
+
 def write_frame(packets):
     x = 0
 
@@ -277,38 +315,7 @@ def write_frame(packets):
             x += 1
             if x > 10:
                 break
-
-            index_frame = frame[0]
-            packet = frame[1]
-            #print(index_frame, end=" ")
-            #print(packet)
-            # Vypis ramca (Poradové číslo rámca v analyzovanom súbore)
-            FILE_VYPIS.write("ramec " + str(index_frame) + "\n")
-            hex_packet = packet
-
-            # Vypis dlzonk (Dĺžku rámca v bajtoch poskytnutú pcap API a dĺžku tohto rámca prenášaného po médiu)
-            dlzka_ramca = int(len(packet)/2)
-            FILE_VYPIS.write("dlzka ramca poskytnuta pcap API - " + str(dlzka_ramca) + "B\n")
-            FILE_VYPIS.write("dlzka ramca prenasaneho po mediu - " + str(max(64, dlzka_ramca + 4)) + "B\n")
-
-            # Vypis typu ramca (– Ethernet II, IEEE 802.3 (IEEE 802.3 s LLC, IEEE 802.3 s LLC a SNAP, IEEE 802.3 - Raw)
-            vnoreny_protokol = write_type_of_frame(hex_packet)
-
-            # Vypis adres (Zdrojovú a cieľovú fyzickú (MAC) adresu uzlov, medzi ktorými je rámec prenášaný)
-            write_MAC_adress(hex_packet, 12)  # od 12. bit =  zdrojova MAC adresa
-            write_MAC_adress(hex_packet, 0)  # od 0. bit =  cielova MAC adresa
-
-            # Vypis vnoreneho protokola
-            FILE_VYPIS.write(vnoreny_protokol + "\n")
-
-            # Vypis cielovej a zdrojovej IP adrese
-            if vnoreny_protokol == "IPv4":
-                FILE_VYPIS.write("zdrojova IP adresa: " + transforme_to_IP_adress(hex_packet[52:60]) + "\n")
-                FILE_VYPIS.write("cielova IP adresa: " + transforme_to_IP_adress(hex_packet[60:68]) + "\n")
-                write_IPv4_type_port(hex_packet, index_frame)  # Vypis IPv4 protokola
-
-            # Vypis celeho ramca
-            write_entire_packet(hex_packet, dlzka_ramca)
+            write_frame_efectiv(frame)
 
          # poslende 10 ramce
         x = 0
@@ -317,78 +324,17 @@ def write_frame(packets):
             x += 1
             if x > 10:
                 break
-            index_frame = frame[0]
-            packet = frame[1]
-            # print(index_frame, end=" ")
-            # print(packet)
-            # Vypis ramca (Poradové číslo rámca v analyzovanom súbore)
-            FILE_VYPIS.write("ramec " + str(index_frame) + "\n")
-            hex_packet = packet
-
-            # Vypis dlzonk (Dĺžku rámca v bajtoch poskytnutú pcap API a dĺžku tohto rámca prenášaného po médiu)
-            dlzka_ramca = int(len(packet) / 2)
-            FILE_VYPIS.write("dlzka ramca poskytnuta pcap API - " + str(dlzka_ramca) + "B\n")
-            FILE_VYPIS.write("dlzka ramca prenasaneho po mediu - " + str(max(64, dlzka_ramca + 4)) + "B\n")
-
-            # Vypis typu ramca (– Ethernet II, IEEE 802.3 (IEEE 802.3 s LLC, IEEE 802.3 s LLC a SNAP, IEEE 802.3 - Raw)
-            vnoreny_protokol = write_type_of_frame(hex_packet)
-
-            # Vypis adres (Zdrojovú a cieľovú fyzickú (MAC) adresu uzlov, medzi ktorými je rámec prenášaný)
-            write_MAC_adress(hex_packet, 12)  # od 12. bit =  zdrojova MAC adresa
-            write_MAC_adress(hex_packet, 0)  # od 0. bit =  cielova MAC adresa
-
-            # Vypis vnoreneho protokola
-            FILE_VYPIS.write(vnoreny_protokol + "\n")
-
-            # Vypis cielovej a zdrojovej IP adrese
-            if vnoreny_protokol == "IPv4":
-                FILE_VYPIS.write("zdrojova IP adresa: " + transforme_to_IP_adress(hex_packet[52:60]) + "\n")
-                FILE_VYPIS.write("cielova IP adresa: " + transforme_to_IP_adress(hex_packet[60:68]) + "\n")
-                write_IPv4_type_port(hex_packet, index_frame)  # Vypis IPv4 protokola
-
-            # Vypis celeho ramca
-            write_entire_packet(hex_packet, dlzka_ramca)
+            write_frame_efectiv(frame)
 
     # ak su menej nez 20, vypise vsetky
     if len(packets) < 20:
-
         dlzka = len(packets)
+
         for frame in packets:
             x += 1
             if x > dlzka:
                 break
-            index_frame = frame[0]
-            packet = frame[1]
-
-            # print(index_frame, end=" ")
-            # print(packet)
-            # Vypis ramca (Poradové číslo rámca v analyzovanom súbore)
-            FILE_VYPIS.write("ramec " + str(index_frame) + "\n")
-            hex_packet = packet
-
-            # Vypis dlzonk (Dĺžku rámca v bajtoch poskytnutú pcap API a dĺžku tohto rámca prenášaného po médiu)
-            dlzka_ramca = int(len(packet) / 2)
-            FILE_VYPIS.write("dlzka ramca poskytnuta pcap API - " + str(dlzka_ramca) + "B\n")
-            FILE_VYPIS.write("dlzka ramca prenasaneho po mediu - " + str(max(64, dlzka_ramca + 4)) + "B\n")
-
-            # Vypis typu ramca (– Ethernet II, IEEE 802.3 (IEEE 802.3 s LLC, IEEE 802.3 s LLC a SNAP, IEEE 802.3 - Raw)
-            vnoreny_protokol = write_type_of_frame(hex_packet)
-
-            # Vypis adres (Zdrojovú a cieľovú fyzickú (MAC) adresu uzlov, medzi ktorými je rámec prenášaný)
-            write_MAC_adress(hex_packet, 12)  # od 12. bit =  zdrojova MAC adresa
-            write_MAC_adress(hex_packet, 0)  # od 0. bit =  cielova MAC adresa
-
-            # Vypis vnoreneho protokola
-            FILE_VYPIS.write(vnoreny_protokol + "\n")
-
-            # Vypis cielovej a zdrojovej IP adrese
-            if vnoreny_protokol == "IPv4":
-                FILE_VYPIS.write("zdrojova IP adresa: " + transforme_to_IP_adress(hex_packet[52:60]) + "\n")
-                FILE_VYPIS.write("cielova IP adresa: " + transforme_to_IP_adress(hex_packet[60:68]) + "\n")
-                write_IPv4_type_port(hex_packet, index_frame)  # Vypis IPv4 protokola
-
-            # Vypis celeho ramca
-            write_entire_packet(hex_packet, dlzka_ramca)
+            write_frame_efectiv(frame)
 
 
 def analyze_files(files):
@@ -557,6 +503,8 @@ if __name__ == "__main__":
     FILE_VYPIS.close()
 
     FILE_VYPIS = open(r"vypis_komunikacia.txt", "w")
+    ries_kom = 1
+
     print("HTTP")
     write_complete_and_incomplete_TCP_communication(HTTP_communications, "HTTP")
     print("HTTPS")
