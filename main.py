@@ -179,15 +179,14 @@ def write_UDP_type_port(hex_packet, index_frame):
     dst_port = int(hex_packet[72:76], 16)
 
 
-    if(UDPports.__contains__(dst_port)):
+    if(UDPports.__contains__(dst_port)) and ries_kom == 0:
         FILE_VYPIS.write(str(UDPports[dst_port]) + "\n")
         add_TFTP_communication(hex_packet, index_frame)
         if UDPports[dst_port] == "TFTP" and ries_kom == 0:
             UDPports[src_port] = "TFTP"
-            print(str(index_frame)+"daaaaaaaaaaaaaaaaaaaaaaaaaaaaa" + str(UDPports[dst_port]))
 
     else:
-        FILE_VYPIS.write("Tento UDP port nie je uvedeny v databaze " + str(dst_port) +" \n")
+        FILE_VYPIS.write("Tento UDP port nie je uvedeny v databaze " + str(dst_port) +"\n")
 
     FILE_VYPIS.write("zdrojovy port: " + str(int(hex_packet[68:72], 16)) + "\n")
     FILE_VYPIS.write("cielovy port: " + str(int(hex_packet[72:76], 16)) + "\n")
@@ -648,5 +647,7 @@ if __name__ == "__main__":
     write_ICMP_ARP_communications(ICMP_communications, "ICMP")
     print("ARP komunikacie")
     write_ICMP_ARP_communications(ARP_communications, "ARP")
+    print("TFTP komunikacie")
+    write_ICMP_ARP_communications(TFTP_communications, "TFTP")
 
     FILE_VYPIS.close()

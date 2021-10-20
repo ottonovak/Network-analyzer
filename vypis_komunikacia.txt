@@ -25,3 +25,82 @@ ARP
 08 00 06 04 00 02 00 a1  b0 08 01 af c0 a8 01 0b
 00 0f 3d 95 d9 99 c0 a8  01 12
 
+
+1. TFTP komunikacia----------------------------------------
+ramec 7
+dlzka ramca poskytnuta pcap API - 63B
+dlzka ramca prenasaneho po mediu - 67B
+Ethernet II
+Zdrojova MAC adresa: 00 a1 b0 08 01 af
+Cielova MAC adresa: 00 0f 3d 95 d9 99
+IPv4
+zdrojova IP adresa: 192.168.1.11
+cielova IP adresa: 192.168.1.18
+UDP
+Tento UDP port nie je uvedeny v databaze 69
+zdrojovy port: 1279
+cielovy port: 69
+00 0f 3d 95 d9 99 00 a1  b0 08 01 af 08 00 45 00
+00 31 46 81 00 00 80 11  70 cd c0 a8 01 0b c0 a8
+01 12 04 ff 00 45 00 1d  95 f1 00 02 77 6f 72 6c
+64 2e 63 70 70 00 6e 65  74 61 73 63 69 69 00
+
+ramec 8
+dlzka ramca poskytnuta pcap API - 60B
+dlzka ramca prenasaneho po mediu - 64B
+Ethernet II
+Zdrojova MAC adresa: 00 0f 3d 95 d9 99
+Cielova MAC adresa: 00 a1 b0 08 01 af
+IPv4
+zdrojova IP adresa: 192.168.1.18
+cielova IP adresa: 192.168.1.11
+UDP
+Tento UDP port nie je uvedeny v databaze 1279
+zdrojovy port: 2050
+cielovy port: 1279
+00 a1 b0 08 01 af 00 0f  3d 95 d9 99 08 00 45 00
+00 20 0a 7b 40 00 40 11  ac e4 c0 a8 01 12 c0 a8
+01 0b 08 02 04 ff 00 0c  6f 63 00 04 00 00 00 02
+77 6f 72 6c 64 2e 63 70  70 00 6e 65
+
+ramec 9
+dlzka ramca poskytnuta pcap API - 136B
+dlzka ramca prenasaneho po mediu - 140B
+Ethernet II
+Zdrojova MAC adresa: 00 a1 b0 08 01 af
+Cielova MAC adresa: 00 0f 3d 95 d9 99
+IPv4
+zdrojova IP adresa: 192.168.1.11
+cielova IP adresa: 192.168.1.18
+UDP
+Tento UDP port nie je uvedeny v databaze 2050
+zdrojovy port: 1279
+cielovy port: 2050
+00 0f 3d 95 d9 99 00 a1  b0 08 01 af 08 00 45 00
+00 7a 46 82 00 00 80 11  70 83 c0 a8 01 0b c0 a8
+01 12 04 ff 08 02 00 66  a1 d2 00 03 00 01 23 69
+6e 63 6c 75 64 65 3c 73  74 64 69 6f 2e 68 3e 0d
+0a 69 6e 74 20 6d 61 69  6e 28 29 0d 0a 7b 0d 0a
+20 20 20 20 20 20 20 20  70 72 69 6e 74 66 28 22
+48 65 6c 6c 6f 20 57 6f  72 6c 64 5c 6e 22 29 3b
+0d 0a 20 20 20 20 20 20  20 20 72 65 74 75 72 6e
+20 30 3b 0d 0a 7d 0d 0a
+
+ramec 10
+dlzka ramca poskytnuta pcap API - 60B
+dlzka ramca prenasaneho po mediu - 64B
+Ethernet II
+Zdrojova MAC adresa: 00 0f 3d 95 d9 99
+Cielova MAC adresa: 00 a1 b0 08 01 af
+IPv4
+zdrojova IP adresa: 192.168.1.18
+cielova IP adresa: 192.168.1.11
+UDP
+Tento UDP port nie je uvedeny v databaze 1279
+zdrojovy port: 2050
+cielovy port: 1279
+00 a1 b0 08 01 af 00 0f  3d 95 d9 99 08 00 45 00
+00 20 0a 7c 40 00 40 11  ac e3 c0 a8 01 12 c0 a8
+01 0b 08 02 04 ff 00 0c  6f 62 00 04 00 01 00 03
+00 01 23 69 6e 63 6c 75  64 65 3c 73
+
