@@ -1,0 +1,27 @@
+
+1. ARP komunikacia----------------------------------------
+ramec 11
+dlzka ramca poskytnuta pcap API - 60B
+dlzka ramca prenasaneho po mediu - 64B
+Ethernet II
+ARP request
+Zdrojova MAC adresa: 00 0f 3d 95 d9 99
+Cielova MAC adresa: 00 a1 b0 08 01 af
+ARP
+00 a1 b0 08 01 af 00 0f  3d 95 d9 99 08 06 00 01
+08 00 06 04 00 01 00 0f  3d 95 d9 99 c0 a8 01 12
+00 00 00 00 00 00 c0 a8  01 0b 00 00 00 00 a0 54
+00 00 a0 54 00 00 05 00  00 00 00 10
+
+ramec 12
+dlzka ramca poskytnuta pcap API - 42B
+dlzka ramca prenasaneho po mediu - 64B
+Ethernet II
+ARP reply
+Zdrojova MAC adresa: 00 a1 b0 08 01 af
+Cielova MAC adresa: 00 0f 3d 95 d9 99
+ARP
+00 0f 3d 95 d9 99 00 a1  b0 08 01 af 08 06 00 01
+08 00 06 04 00 02 00 a1  b0 08 01 af c0 a8 01 0b
+00 0f 3d 95 d9 99 c0 a8  01 12
+

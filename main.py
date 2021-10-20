@@ -24,7 +24,7 @@ FTP_datove_communications = {}
 DNS_communications = {}
 ICMP_communications = {}
 ARP_communications = {}
-
+TFTP_communications = {}
 
 def protocol_initialization():
     global ETHER_types, LSAP_types, IPprotocols, TCPports, UDPports  # Prikaz "global"
@@ -154,18 +154,43 @@ def write_TCP_type_port(hex_packet, index_frame):
     else:
         FILE_VYPIS.write("Taky TCP ne je uvedeny, SRC port: "+ str(src_port) + " DST port: " + str(dst_port) + "\n")
 
+def add_TFTP_communication(hex_packet, index_frame):
+    src_ip = transforme_to_IP_adress(hex_packet[52:60])
+    dst_ip = transforme_to_IP_adress(hex_packet[60:68])
 
-def write_UDP_type_port(hex_packet):
-    hex_protocol = hex_packet[68:72]
-    index_dictionary = int(hex_protocol, 16)
 
-    if UDPports.__contains__(index_dictionary):  # Preverii ak taky port bol vobec uvedeni databaze
-        FILE_VYPIS.write(UDPports[index_dictionary] + "\n")
-        FILE_VYPIS.write("zdrojovy port: " + str(int(hex_packet[68:72], 16)) + "\n")
-        FILE_VYPIS.write("cielovy port: " + str(int(hex_packet[72:76], 16)) + "\n")
+    # kluc pre kazdu komunikaciu vytvoreny z str(src_ip) + str(dst_ip)
+    src_key = str(src_ip) + str(dst_ip)
+    dst_key = str(dst_ip) + str(src_ip)
+
+    if not TFTP_communications.__contains__(src_key) and not TFTP_communications.__contains__(dst_key):
+        TFTP_communications[src_key] = list()
+        TFTP_communications[src_key].append([index_frame, hex_packet])
+
+    elif TFTP_communications.__contains__(src_key):
+        TFTP_communications[src_key].append([index_frame, hex_packet])
+
+    elif TFTP_communications.__contains__(dst_key):
+        TFTP_communications[dst_key].append([index_frame, hex_packet])
+
+
+def write_UDP_type_port(hex_packet, index_frame):
+    src_port = int(hex_packet[68:72], 16)
+    dst_port = int(hex_packet[72:76], 16)
+
+
+    if(UDPports.__contains__(dst_port)):
+        FILE_VYPIS.write(str(UDPports[dst_port]) + "\n")
+        add_TFTP_communication(hex_packet, index_frame)
+        if UDPports[dst_port] == "TFTP" and ries_kom == 0:
+            UDPports[src_port] = "TFTP"
+            print(str(index_frame)+"daaaaaaaaaaaaaaaaaaaaaaaaaaaaa" + str(UDPports[dst_port]))
+
     else:
-        FILE_VYPIS.write("Tento UDP port nie je uvedeny v databaze\n")
+        FILE_VYPIS.write("Tento UDP port nie je uvedeny v databaze " + str(dst_port) +" \n")
 
+    FILE_VYPIS.write("zdrojovy port: " + str(int(hex_packet[68:72], 16)) + "\n")
+    FILE_VYPIS.write("cielovy port: " + str(int(hex_packet[72:76], 16)) + "\n")
 
 def write_ICMP_type_port(hex_packet, index_frame):
     global ries_kom
@@ -175,7 +200,7 @@ def write_ICMP_type_port(hex_packet, index_frame):
     dst_port = int(hex_packet[72:76], 16)
 
 
-    if ICMP_ports.__contains__(type_of_ICMP):  # Preverii ak taky port bol vobec uvedeni databaze
+    if ICMP_ports.__contains__(type_of_ICMP) and ries_kom == 0:  # Preverii ak taky port bol vobec uvedeni databaze
         FILE_VYPIS.write(ICMP_ports[type_of_ICMP] + " -> " + str(type_of_ICMP) + " \n")
 
         if ries_kom == 0:
@@ -202,7 +227,8 @@ def write_ICMP_type_port(hex_packet, index_frame):
 
 
     else:
-        FILE_VYPIS.write("Taky ICMP ne je uvedeny v databaze: " + str(type_of_ICMP) + "\n")
+        if ries_kom == 0:
+            FILE_VYPIS.write("Taky ICMP ne je uvedeny v databaze: " + str(type_of_ICMP) + "\n")
 
 
 def add_source_IPv4_adress_to_list(hex_packet):
@@ -216,46 +242,31 @@ def add_source_IPv4_adress_to_list(hex_packet):
 
 
 def add_ARP_communication(hex_packet, index_frame):
-    type_of_ARP = hex_packet[42:44]
+    type_of_ARP = ""
+    src_ip = ""
+    src_MAC = ""
+    dst_ip = ""
 
-    if type_of_ARP.decode() == "01": # 01 -> ARP request, 02-> ARP reply
-        src_ip = hex_packet[56:64].decode()
-        dst_ip = hex_packet[78:86].decode()
+    if hex_packet[42:44].decode() == "01":
+        type_of_ARP = "request"
+    else:
+        type_of_ARP = "reply"
 
-        src_MAC = write_MAC_adress(hex_packet, 12)
+    if type_of_ARP == "request" or type_of_ARP == "reply":
+        if type_of_ARP == "request":
+            src_ip = transforme_to_IP_adress(hex_packet[56:64])
+            src_MAC = str(hex_packet[12:24].decode())
+            dst_ip = transforme_to_IP_adress(hex_packet[76:84])
+        else:
+            dst_ip = transforme_to_IP_adress(hex_packet[56:64])
+            src_MAC = str(hex_packet[0:12].decode())
+            src_ip = transforme_to_IP_adress(hex_packet[76:84])
 
-        # kluc pre kazdu komunikaciu vytvoreny z str(src_ip) + str(src_MAC) + str(dst_ip)
-        src_key = str(src_ip) + str(src_MAC) + str(dst_ip)
-        dst_key = str(dst_ip) + str(src_MAC) + str(src_ip)
+        key = str(src_ip) + str(src_MAC) + str(dst_ip)
 
-        if not ARP_communications.__contains__(src_key) and not ARP_communications.__contains__(dst_key):
-            ARP_communications[src_key] = list()
-            ARP_communications[src_key].append([index_frame, hex_packet])
-
-        elif ARP_communications.__contains__(src_key):
-            ARP_communications[src_key].append([index_frame, hex_packet])
-
-        elif ARP_communications.__contains__(dst_key):
-            ARP_communications[dst_key].append([index_frame, hex_packet])
-
-    elif type_of_ARP.decode() == "02": # 02-> ARP reply
-        src_ip = hex_packet[78:86].decode()
-        dst_ip = hex_packet[56:64].decode()
-        src_MAC = write_MAC_adress(hex_packet, 0)
-
-        # kluc pre kazdu komunikaciu vytvoreny z str(src_ip) + str(src_MAC) + str(dst_ip)
-        src_key = str(src_ip) + str(src_MAC) + str(dst_ip)
-        dst_key = str(dst_ip) + str(src_MAC) + str(src_ip)
-
-        if not ARP_communications.__contains__(src_key) and not ARP_communications.__contains__(dst_key):
-            ARP_communications[src_key] = list()
-            ARP_communications[src_key].append([index_frame, hex_packet])
-
-        elif ARP_communications.__contains__(src_key):
-            ARP_communications[src_key].append([index_frame, hex_packet])
-
-        elif ARP_communications.__contains__(dst_key):
-            ARP_communications[dst_key].append([index_frame, hex_packet])
+        if not ARP_communications.__contains__(key):
+            ARP_communications[key] = list()
+        ARP_communications[key].append([index_frame, hex_packet])
 
 
 def find_ether_type(hex_packet, index_frame):
@@ -299,7 +310,7 @@ def find_lsap_type(hex_packet):
 
 def write_IPv4_type_port(hex_packet, index_frame):
     # Hlada v slovniku nazov protokolu (ktore cerpal z databaze/textaku "protokoly.txt")
-
+# todo hladaj
     hex_protocol = hex_packet[46:48]
     index_dictionary = int(hex_protocol, 16)
 
@@ -309,7 +320,7 @@ def write_IPv4_type_port(hex_packet, index_frame):
             write_TCP_type_port(hex_packet, index_frame)
 
         elif IPprotocols[index_dictionary] == "UDP":
-            write_UDP_type_port(hex_packet)
+            write_UDP_type_port(hex_packet, index_frame)
 
         elif IPprotocols[index_dictionary] == "ICMP":
             write_ICMP_type_port(hex_packet, index_frame)
