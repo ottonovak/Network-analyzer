@@ -1,4 +1,6 @@
-# Napisal Stefan Otto Novak
+#  Stefan Otto Novak
+# PKS 1 Zadanie - ANALYZÁTOR SIEŤOVEJ KOMUNIKÁCIE
+
 import operator
 from os import walk
 from scapy.compat import bytes_hex
@@ -309,7 +311,7 @@ def find_lsap_type(hex_packet):
 
 def write_IPv4_type_port(hex_packet, index_frame):
     # Hlada v slovniku nazov protokolu (ktore cerpal z databaze/textaku "protokoly.txt")
-# todo hladaj
+
     hex_protocol = hex_packet[46:48]
     index_dictionary = int(hex_protocol, 16)
 
@@ -620,13 +622,13 @@ def write_ICMP_ARP_communications(communications, type_of_comm):
 
 
 
-
 if __name__ == "__main__":
     FILE_VYPIS = open(r"vypis.txt", "w")
     protocol_initialization()
     files = read_files()
     analyze_files(files)
     FILE_VYPIS.close()
+
 
     FILE_VYPIS = open(r"vypis_komunikacia.txt", "w")
     ries_kom = 1
