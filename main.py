@@ -12,6 +12,8 @@ LSAP_types = {}
 IPprotocols = {}
 TCPports = {}
 UDPports = {}
+ICMP_ports = {}
+ARP_ports = {}
 source_IPv4_addresses = {}
 HTTP_communications = {}
 HTTPS_communications = {}
@@ -20,6 +22,8 @@ SSH_communications = {}
 FTP_riadiace_communications = {}
 FTP_datove_communications = {}
 DNS_communications = {}
+ICMP_communications = {}
+ARP_communications = {}
 
 
 def protocol_initialization():
@@ -58,6 +62,9 @@ def protocol_initialization():
 
         elif type_of_protocol == "UDP":
             UDPports[str1_int] = nested_protocol
+
+        elif type_of_protocol == "ICMP":
+            ICMP_ports[str1_int] = nested_protocol
 
     FILE_PROTOKOLY.close()
 
@@ -103,7 +110,7 @@ def write_TCP_type_port(hex_packet, index_frame):
     dst_port = int(hex_packet[72:76], 16)
 
     if TCPports.__contains__(src_port):  # Preverii ak taky port bol vobec uvedeni databaze
-        FILE_VYPIS.write(TCPports[src_port] + "\n")
+        FILE_VYPIS.write(TCPports[src_port] + " -> " + str(src_port) + " \n")
         FILE_VYPIS.write("zdrojovy port: " + str(src_port) + "\n")
         FILE_VYPIS.write("cielovy port: " + str(dst_port) + "\n")
 
@@ -124,7 +131,7 @@ def write_TCP_type_port(hex_packet, index_frame):
                 add_communication(FTP_datove_communications, index_frame, hex_packet)
 
     elif TCPports.__contains__(dst_port): # pripad ak je cielova adresa neajky TCP
-        FILE_VYPIS.write(TCPports[dst_port] + "\n")
+        FILE_VYPIS.write(TCPports[dst_port] + " -> " + str(dst_port) + " \n")
         FILE_VYPIS.write("zdrojovy port: " + str(src_port) + "\n")
         FILE_VYPIS.write("cielovy port: " + str(dst_port) + "\n")
 
@@ -158,6 +165,44 @@ def write_UDP_type_port(hex_packet):
         FILE_VYPIS.write("cielovy port: " + str(int(hex_packet[72:76], 16)) + "\n")
     else:
         FILE_VYPIS.write("Tento UDP port nie je uvedeny v databaze\n")
+
+
+def write_ICMP_type_port(hex_packet, index_frame):
+    global ries_kom
+
+    type_of_ICMP = int(hex_packet[68:70], 16)
+    src_port = int(hex_packet[68:72], 16)
+    dst_port = int(hex_packet[72:76], 16)
+
+
+    if ICMP_ports.__contains__(type_of_ICMP):  # Preverii ak taky port bol vobec uvedeni databaze
+        FILE_VYPIS.write(ICMP_ports[type_of_ICMP] + " -> " + str(type_of_ICMP) + " \n")
+
+        if ries_kom == 0:
+
+            src_ip = transforme_to_IP_adress(hex_packet[52:60])
+            dst_ip = transforme_to_IP_adress(hex_packet[60:68])
+
+            # kluc pre kazdu komunikaciu vytvoreny z str(src_ip) + str(dst_ip)
+            src_key = str(src_ip) + str(dst_ip)
+            dst_key = str(dst_ip) + str(src_ip)
+
+            if not ICMP_communications.__contains__(src_key) and not ICMP_communications.__contains__(dst_key):
+                ICMP_communications[src_key] = list()
+                ICMP_communications[src_key].append([index_frame, hex_packet])
+
+            elif ICMP_communications.__contains__(src_key):
+                ICMP_communications[src_key].append([index_frame, hex_packet])
+
+            elif ICMP_communications.__contains__(dst_key):
+                ICMP_communications[dst_key].append([index_frame, hex_packet])
+
+            #for communication in ICMP_communications:
+            #    print("ramec " + str(index_frame) + " -> komunikacia " + str(communication))
+
+
+    else:
+        FILE_VYPIS.write("Taky ICMP ne je uvedeny v databaze: " + str(type_of_ICMP) + "\n")
 
 
 def add_source_IPv4_adress_to_list(hex_packet):
@@ -206,8 +251,11 @@ def write_IPv4_type_port(hex_packet, index_frame):
         if IPprotocols[index_dictionary] == "TCP":
             write_TCP_type_port(hex_packet, index_frame)
 
-        if IPprotocols[index_dictionary] == "UDP":
+        elif IPprotocols[index_dictionary] == "UDP":
             write_UDP_type_port(hex_packet)
+
+        elif IPprotocols[index_dictionary] == "ICMP":
+            write_ICMP_type_port(hex_packet, index_frame)
     else:
         FILE_VYPIS.write("Tento typ IP protokolu nie je uvedeny v databaze\n")
 
@@ -493,6 +541,18 @@ def write_complete_and_incomplete_TCP_communication(communications, protocol_typ
                     uspesna_vypisana_nekompletna = 1
 
 
+def write_ICMP_communications(ICMP_communications):
+
+    x = 0
+    for commun in ICMP_communications:
+        x += 1
+        print(x)
+        FILE_VYPIS.write("\n" + str(x) + ". ICMP komunikacia\n")
+        for frame in ICMP_communications[commun]:
+            write_frame_efectiv(frame)
+
+
+
 
 if __name__ == "__main__":
     FILE_VYPIS = open(r"vypis.txt", "w")
@@ -504,17 +564,19 @@ if __name__ == "__main__":
     FILE_VYPIS = open(r"vypis_komunikacia.txt", "w")
     ries_kom = 1
 
-    print("HTTP")
+    print("HTTP komunikacie")
     write_complete_and_incomplete_TCP_communication(HTTP_communications, "HTTP")
-    print("HTTPS")
+    print("HTTPS komunikacie")
     write_complete_and_incomplete_TCP_communication(HTTPS_communications, "HTTPS")
-    print("TELNET")
+    print("TELNET komunikacie")
     write_complete_and_incomplete_TCP_communication(TELNET_communications, "TELNET")
-    print("SSH")
+    print("SSH komunikacie")
     write_complete_and_incomplete_TCP_communication(SSH_communications, "SSH")
-    print("FTP riadiace")
+    print("FTP riadiace komunikacie")
     write_complete_and_incomplete_TCP_communication(FTP_riadiace_communications, "FTP riadiace")
-    print("FTP datove")
+    print("FTP datove komunikacie")
     write_complete_and_incomplete_TCP_communication(FTP_datove_communications, "FTP datove")
+    print("ICMP komunikacie")
+    write_ICMP_communications(ICMP_communications)
 
     FILE_VYPIS.close()

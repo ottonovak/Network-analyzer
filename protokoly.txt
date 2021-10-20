@@ -27,3 +27,21 @@
 0x0045 69 TFTP
 0x0202 514 syslog
 0x829a 33434 traceroute
+
+#ICMP
+0x00 0 echo reply
+0x03 3 destination unreachable
+0x04 4 source quench
+0x05 5 redirect
+0x08 8 echo request
+0x09 9 router advertisement
+0x0a 10 router selection
+0x0b 11 time exceeded
+0x0c 12 parameter problem
+0x0d 13 timestamp
+0x0e 14 timestamp reply
+0x0f 15 information request
+0x10 16 information reply
+0x11 17 address mask request
+0x12 18 address mask reply
+0x1e 30 traceroute
