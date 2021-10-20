@@ -215,7 +215,50 @@ def add_source_IPv4_adress_to_list(hex_packet):
         source_IPv4_addresses[adress_str] = 1        # Ked adresa sa vyskitne prvykrat
 
 
-def find_ether_type(hex_packet):
+def add_ARP_communication(hex_packet, index_frame):
+    type_of_ARP = hex_packet[42:44]
+
+    if type_of_ARP.decode() == "01": # 01 -> ARP request, 02-> ARP reply
+        src_ip = hex_packet[56:64].decode()
+        dst_ip = hex_packet[78:86].decode()
+
+        src_MAC = write_MAC_adress(hex_packet, 12)
+
+        # kluc pre kazdu komunikaciu vytvoreny z str(src_ip) + str(src_MAC) + str(dst_ip)
+        src_key = str(src_ip) + str(src_MAC) + str(dst_ip)
+        dst_key = str(dst_ip) + str(src_MAC) + str(src_ip)
+
+        if not ARP_communications.__contains__(src_key) and not ARP_communications.__contains__(dst_key):
+            ARP_communications[src_key] = list()
+            ARP_communications[src_key].append([index_frame, hex_packet])
+
+        elif ARP_communications.__contains__(src_key):
+            ARP_communications[src_key].append([index_frame, hex_packet])
+
+        elif ARP_communications.__contains__(dst_key):
+            ARP_communications[dst_key].append([index_frame, hex_packet])
+
+    elif type_of_ARP.decode() == "02": # 02-> ARP reply
+        src_ip = hex_packet[78:86].decode()
+        dst_ip = hex_packet[56:64].decode()
+        src_MAC = write_MAC_adress(hex_packet, 0)
+
+        # kluc pre kazdu komunikaciu vytvoreny z str(src_ip) + str(src_MAC) + str(dst_ip)
+        src_key = str(src_ip) + str(src_MAC) + str(dst_ip)
+        dst_key = str(dst_ip) + str(src_MAC) + str(src_ip)
+
+        if not ARP_communications.__contains__(src_key) and not ARP_communications.__contains__(dst_key):
+            ARP_communications[src_key] = list()
+            ARP_communications[src_key].append([index_frame, hex_packet])
+
+        elif ARP_communications.__contains__(src_key):
+            ARP_communications[src_key].append([index_frame, hex_packet])
+
+        elif ARP_communications.__contains__(dst_key):
+            ARP_communications[dst_key].append([index_frame, hex_packet])
+
+
+def find_ether_type(hex_packet, index_frame):
     global ries_kom
     # Hlada v slovniku nazov protokolu (ktore cerpal z databaze/textaku "protokoly.txt")
     str1 = hex_packet[24:28]
@@ -224,6 +267,20 @@ def find_ether_type(hex_packet):
     if ETHER_types.__contains__(index_dictionary):  # Preverii ak taky protokol bol vobec uvedeni databaze
         if ETHER_types[index_dictionary] == "IPv4" and ries_kom == 0:
             add_source_IPv4_adress_to_list(hex_packet)
+
+        if ETHER_types[index_dictionary] == "ARP" and ries_kom == 0:
+            if hex_packet[42:44].decode() == "01":
+                FILE_VYPIS.write("ARP request\n")
+            elif hex_packet[42:44].decode() == "02":
+                FILE_VYPIS.write("ARP reply\n")
+            add_ARP_communication(hex_packet, index_frame)
+
+        if ETHER_types[index_dictionary] == "ARP" and ries_kom == 1:
+            if hex_packet[42:44].decode() == "01":
+                FILE_VYPIS.write("ARP request\n")
+            elif hex_packet[42:44].decode() == "02":
+                FILE_VYPIS.write("ARP reply\n")
+
         return ETHER_types[index_dictionary]
     else:
         return "Tento EtherType nie je uvedeny v databaze"
@@ -267,7 +324,7 @@ def read_files():
     return files
 
 
-def write_type_of_frame(hex_packet):
+def write_type_of_frame(hex_packet, index_frame):
     # Vypis typu ramca (– Ethernet II, IEEE 802.3 (IEEE 802.3 s LLC, IEEE 802.3 s LLC a SNAP, IEEE 802.3 - Raw)
     str1 = hex_packet[24:28]
     str2 = hex_packet[28:30]
@@ -275,7 +332,7 @@ def write_type_of_frame(hex_packet):
 
     if int(str1, 16) > 1500:
         FILE_VYPIS.write("Ethernet II\n")
-        vnoreny_protokol = find_ether_type(hex_packet)
+        vnoreny_protokol = find_ether_type(hex_packet, index_frame)
 
     elif str2.decode() == "ff" or str2.decode() == "FF":
         FILE_VYPIS.write("IEEE 802.3 - Raw\n")
@@ -335,7 +392,7 @@ def write_frame_efectiv(frame):
     FILE_VYPIS.write("dlzka ramca prenasaneho po mediu - " + str(max(64, dlzka_ramca + 4)) + "B\n")
 
     # Vypis typu ramca (– Ethernet II, IEEE 802.3 (IEEE 802.3 s LLC, IEEE 802.3 s LLC a SNAP, IEEE 802.3 - Raw)
-    vnoreny_protokol = write_type_of_frame(hex_packet)
+    vnoreny_protokol = write_type_of_frame(hex_packet, index_frame)
 
     # Vypis adres (Zdrojovú a cieľovú fyzickú (MAC) adresu uzlov, medzi ktorými je rámec prenášaný)
     write_MAC_adress(hex_packet, 12)  # od 12. bit =  zdrojova MAC adresa
@@ -405,7 +462,7 @@ def analyze_files(files):
             FILE_VYPIS.write("dlzka ramca prenasaneho po mediu - " + str(max(64, dlzka_ramca + 4)) + "B\n")
 
             # Vypis typu ramca (– Ethernet II, IEEE 802.3 (IEEE 802.3 s LLC, IEEE 802.3 s LLC a SNAP, IEEE 802.3 - Raw)
-            vnoreny_protokol = write_type_of_frame(hex_packet)
+            vnoreny_protokol = write_type_of_frame(hex_packet, index_frame)
 
             # Vypis adres (Zdrojovú a cieľovú fyzickú (MAC) adresu uzlov, medzi ktorými je rámec prenášaný)
             write_MAC_adress(hex_packet, 12) # od 12. bit =  zdrojova MAC adresa
@@ -541,14 +598,14 @@ def write_complete_and_incomplete_TCP_communication(communications, protocol_typ
                     uspesna_vypisana_nekompletna = 1
 
 
-def write_ICMP_communications(ICMP_communications):
+def write_ICMP_ARP_communications(communications, type_of_comm):
 
     x = 0
-    for commun in ICMP_communications:
+    for commun in communications:
         x += 1
         print(x)
-        FILE_VYPIS.write("\n" + str(x) + ". ICMP komunikacia\n")
-        for frame in ICMP_communications[commun]:
+        FILE_VYPIS.write("\n" + str(x) + ". "+ str(type_of_comm)+" komunikacia\n")
+        for frame in communications[commun]:
             write_frame_efectiv(frame)
 
 
@@ -577,6 +634,8 @@ if __name__ == "__main__":
     print("FTP datove komunikacie")
     write_complete_and_incomplete_TCP_communication(FTP_datove_communications, "FTP datove")
     print("ICMP komunikacie")
-    write_ICMP_communications(ICMP_communications)
+    write_ICMP_ARP_communications(ICMP_communications, "ICMP")
+    print("ARP komunikacie")
+    write_ICMP_ARP_communications(ARP_communications, "ARP")
 
     FILE_VYPIS.close()
