@@ -305,6 +305,7 @@ def write_frame_efectiv(frame):
     # Vypis celeho ramca
     write_entire_packet(hex_packet, dlzka_ramca)
 
+
 def write_frame(packets):
     x = 0
 
@@ -468,10 +469,8 @@ def find_end_communication(commun, ramec_pokracovat, communications):
 
 
 def write_complete_and_incomplete_TCP_communication(communications, protocol_type):
-
     uspesna_vypisana_kompletna = 0
     uspesna_vypisana_nekompletna = 0
-
 
     for commun in communications:
         start = find_start_communication(commun, communications)
