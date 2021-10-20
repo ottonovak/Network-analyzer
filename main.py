@@ -604,7 +604,7 @@ def write_ICMP_ARP_communications(communications, type_of_comm):
     for commun in communications:
         x += 1
         print(x)
-        FILE_VYPIS.write("\n" + str(x) + ". "+ str(type_of_comm)+" komunikacia\n")
+        FILE_VYPIS.write("\n" + str(x) + ". "+ str(type_of_comm)+" komunikacia----------------------------------------\n")
         for frame in communications[commun]:
             write_frame_efectiv(frame)
 
