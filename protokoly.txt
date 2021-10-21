@@ -23,6 +23,7 @@
 0x01bb 443 HTTPS
 
 #UDP
+0x0035 53 DNS
 0x0045 69 TFTP
 0x0202 514 syslog
 0x829a 33434 traceroute

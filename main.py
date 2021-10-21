@@ -6,7 +6,7 @@ from os import walk
 from scapy.compat import bytes_hex
 from scapy.utils import rdpcap
 
-
+pocet_DNS = 0
 files = []
 ries_kom = 0
 ETHER_types = {}
@@ -177,18 +177,23 @@ def add_TFTP_communication(hex_packet, index_frame):
 
 
 def write_UDP_type_port(hex_packet, index_frame):
+    global pocet_DNS
     src_port = int(hex_packet[68:72], 16)
     dst_port = int(hex_packet[72:76], 16)
 
-
-    if(UDPports.__contains__(dst_port)) and ries_kom == 0:
-        FILE_VYPIS.write(str(UDPports[dst_port]) + "\n")
-        add_TFTP_communication(hex_packet, index_frame)
-        if UDPports[dst_port] == "TFTP" and ries_kom == 0:
-            UDPports[src_port] = "TFTP"
+    if (dst_port == 53 or src_port == 53) and ries_kom == 0:
+        pocet_DNS += 1
+        print("c. DNS ramca: " + str(index_frame) +" ramec: " + str(hex_packet.decode()))
 
     else:
-        FILE_VYPIS.write("Tento UDP port nie je uvedeny v databaze " + str(dst_port) +"\n")
+        if(UDPports.__contains__(dst_port)) and ries_kom == 0:
+            FILE_VYPIS.write(str(UDPports[dst_port]) + "\n")
+            add_TFTP_communication(hex_packet, index_frame)
+            if UDPports[dst_port] == "TFTP" and ries_kom == 0:
+                UDPports[src_port] = "TFTP"
+
+        else:
+            FILE_VYPIS.write("Tento UDP port nie je uvedeny v databaze " + str(dst_port) +"\n")
 
     FILE_VYPIS.write("zdrojovy port: " + str(int(hex_packet[68:72], 16)) + "\n")
     FILE_VYPIS.write("cielovy port: " + str(int(hex_packet[72:76], 16)) + "\n")
@@ -623,6 +628,7 @@ def write_ICMP_ARP_communications(communications, type_of_comm):
 
 
 if __name__ == "__main__":
+
     FILE_VYPIS = open(r"vypis.txt", "w")
     protocol_initialization()
     files = read_files()
@@ -633,23 +639,6 @@ if __name__ == "__main__":
     FILE_VYPIS = open(r"vypis_komunikacia.txt", "w")
     ries_kom = 1
 
-    print("HTTP komunikacie")
-    write_complete_and_incomplete_TCP_communication(HTTP_communications, "HTTP")
-    print("HTTPS komunikacie")
-    write_complete_and_incomplete_TCP_communication(HTTPS_communications, "HTTPS")
-    print("TELNET komunikacie")
-    write_complete_and_incomplete_TCP_communication(TELNET_communications, "TELNET")
-    print("SSH komunikacie")
-    write_complete_and_incomplete_TCP_communication(SSH_communications, "SSH")
-    print("FTP riadiace komunikacie")
-    write_complete_and_incomplete_TCP_communication(FTP_riadiace_communications, "FTP riadiace")
-    print("FTP datove komunikacie")
-    write_complete_and_incomplete_TCP_communication(FTP_datove_communications, "FTP datove")
-    print("ICMP komunikacie")
-    write_ICMP_ARP_communications(ICMP_communications, "ICMP")
-    print("ARP komunikacie")
-    write_ICMP_ARP_communications(ARP_communications, "ARP")
-    print("TFTP komunikacie")
-    write_ICMP_ARP_communications(TFTP_communications, "TFTP")
+    print("Celkovy pcoet DNS ramcov: " + str(pocet_DNS))
 
     FILE_VYPIS.close()
